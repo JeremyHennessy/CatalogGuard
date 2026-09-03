@@ -9,16 +9,16 @@ Date: 2026-09-03
 Canonical repository: JeremyHennessy/CatalogGuard
 Immutable main baseline SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
 Phase 1 branch: phase-1/shopify-scaffold
-Phase 1 PR: #11 (draft)
+Phase 1 PR: #11 draft
 Phase 1 issue: #1 CLOSED — live development-store acceptance verified
 Phase 2 branch: phase-2/domain-rule-engine
-Phase 2 PR: #12 (draft, stacked on Phase 1)
+Phase 2 PR: #12 draft, stacked on Phase 1
 Phase 2 issue: #2 CLOSED — engineering scope complete
 Phase 3 branch: phase-3/baseline-dashboard
-Phase 3 PR: #14 (draft, stacked on Phase 2)
+Phase 3 PR: #14 draft, stacked on Phase 2
 Phase 3 issue: #13 OPEN — live baseline acceptance in progress
-Phase 3 submit-fix checkpoint: 06be5203eb21afd9712c0f53f3ec7dd44a459302
-Phase 3 submit-fix Quality Gate: 33797199974 — success
+Phase 3 dedicated-baseline-route checkpoint: 667de2a032433a6f5a0ae6226be7ac764c6ec86c
+Phase 3 dedicated-baseline-route Quality Gate: 33798229165 — success
 Shopify Admin API: 2026-07 / ApiVersion.July26
 Requested CatalogGuard scopes: read_products only
 Shopify development store: catalogguard-dev-p8tpcpjw.myshopify.com
@@ -34,17 +34,17 @@ There is **no user-approved merge/checkpoint yet**. Green CI and closed engineer
 
 ## Phase 1 live acceptance — complete
 
-- CatalogGuard is installed on `catalogguard-dev-p8tpcpjw.myshopify.com`.
-- Shopify reports the app requests exactly `read_products` and the installation has exactly `read_products` granted.
-- The embedded React Router App Home opens successfully inside Shopify Admin.
-- The app executed authenticated Admin GraphQL against API `2026-07` and rendered real development-store products/variant counts.
-- No product write, customer, or order scope was added.
+- CatalogGuard is installed on the development store.
+- Shopify reports exactly `read_products` requested and granted.
+- The embedded React Router App Home opens inside Shopify Admin.
+- CatalogGuard executes authenticated Admin GraphQL against API `2026-07` and reads real development-store catalog records.
+- No product-write, customer, or order scope was added.
 
 ## Phase 2 engineering scope — complete
 
 Phase 2 provides the deterministic normalized catalog model, 15 built-in rules, immutable policy/evaluation semantics, findings lifecycle, exact exception semantics, preflight outcomes, evidence-preserving Prisma persistence, exhaustive Shopify product/variant pagination with completeness verification, normalization, and transactional scan orchestration.
 
-The repository-green in-code path is:
+Repository-green in-code path:
 
 `authenticated Shopify Admin -> exhaustive product/variant read -> normalized complete catalog -> immutable policy evaluation -> transactional scan/finding persistence`
 
@@ -52,18 +52,16 @@ Rule status remains `PASS`, `FAIL`, `NOT_APPLICABLE`, `UNKNOWN`; enforcement rem
 
 ## Phase 3 first slice — implemented
 
-The first Phase 3 slice turns the engine into the first merchant-facing workflow without silently inventing a production policy.
-
 ### Overview / onboarding
 
 - Authenticated Shopify `shop { id }` is persisted as the CatalogGuard tenant identity with GID/domain conflict protection.
 - The old Phase 1 10-product demo is replaced by an evidence-backed Overview.
-- Page load reads persisted evidence only; it does not run a scan.
+- Page load reads persisted evidence only and does not run a scan.
 - Before baseline, Overview explicitly shows `No baseline yet`.
 
 ### Development validation policy
 
-The only current onboarding policy is explicitly development-only and contains exactly:
+The current onboarding policy is explicitly development-only and contains exactly:
 
 - `CG-SKU-001` SKU required — enabled, CRITICAL, blocking, ACTIVE products only.
 - `CG-SKU-002` SKU unique — enabled, CRITICAL, blocking, ACTIVE products only, `EXACT` normalization.
@@ -73,7 +71,6 @@ This is not a merchant production default. The policy has deterministic per-shop
 ### Baseline action
 
 - `Establish dev baseline` is an explicit user action.
-- The server requires exact intent `establish-dev-baseline`; unknown actions receive HTTP 400.
 - Existing COMPLETE baseline is checked before scanning.
 - Exact persisted exceptions are loaded through a service boundary.
 - The action invokes the verified Shopify reader and `runShopifyCatalogPolicyScanV1` with `baseline=true`.
@@ -82,31 +79,30 @@ This is not a merchant production default. The policy has deterministic per-shop
 
 ### Persisted Overview after baseline
 
-Overview is wired to show persisted:
+Overview is wired to show persisted products/variants evaluated, PASS/FAIL/UNKNOWN/NOT_APPLICABLE counts, open findings, baseline debt, regressions, blocking violations, blocking indeterminate results, waived failures, and current finding evidence summaries.
 
-- products/variants evaluated;
-- PASS / FAIL / UNKNOWN / NOT_APPLICABLE counts;
-- open findings;
-- baseline debt;
-- new/reopened regressions;
-- blocking violations;
-- blocking indeterminate results;
-- waived failures;
-- current open finding evidence summaries.
-
-## Live Phase 3 acceptance attempt — 2026-09-03
+## Live Phase 3 acceptance attempts — 2026-09-03
 
 The pre-baseline embedded Overview was verified live and correctly showed `No baseline yet` plus the explicit development policy and action.
 
-The first click of `Establish dev baseline` returned React Router `Error: Bad Request` before Shopify catalog read/scan execution. The error matched CatalogGuard's own unsupported-intent 400 guard. No baseline was persisted and no evidence state was modified.
+Two clicks of `Establish dev baseline` returned React Router `Error: Bad Request` before Shopify catalog read/scan execution. No baseline was persisted and no scan/finding evidence was modified.
 
-Root boundary: the client used React Router `<Form>` with a hidden intent input while the submit control was Shopify's `s-button` web component. Shopify documents `s-button type="submit"` as integrating with native HTML forms; relying on that through React Router's intercepted Form layer produced an ambiguous submit payload in the live App Home.
+The first implementation used React Router `<Form>` plus a Shopify `s-button` submit control and expected a hidden `intent` field. The first fix changed that to `useSubmit({ intent })`. The second live attempt proved the request still reached the index action without the expected intent. This ruled out Shopify auth, scope, tunnel, Prisma, and the scan engine; the failure remained solely at the index-route request-body dispatch boundary.
 
-Fix checkpoint `06be5203eb21afd9712c0f53f3ec7dd44a459302` removes that interoperability assumption. The Shopify button now invokes React Router `useSubmit()` directly with an explicit URL-encoded `{ intent: "establish-dev-baseline" }` payload. The server-side intent guard is unchanged.
+### Dedicated action-route fix
 
-Permanent Quality Gate `33797199974` passed locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build.
+Checkpoint `667de2a032433a6f5a0ae6226be7ac764c6ec86c` removes request-body intent dispatch entirely:
 
-The next live action is to pull this checkpoint locally and retry **once**. Do not reset the dev store or change Shopify scopes/configuration.
+- new action-only route: `POST /app/baseline`;
+- Overview button calls `useSubmit(null, { method: "post", action: "/app/baseline" })`;
+- no form body or intent field is required;
+- `/app/baseline` authenticates the Shopify request, resolves the CatalogGuard shop, checks for an existing baseline, creates/loads the immutable dev policy, loads exceptions, executes the verified scan, and redirects to `/app`;
+- GET `/app/baseline` redirects to `/app`;
+- the old index-route unsupported-intent action is removed.
+
+Permanent Quality Gate `33798229165` passed locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build.
+
+The next live action is to pull this checkpoint locally and retry once. Do not reset the dev store, relink the Shopify app, or change scopes/configuration.
 
 ## Repository-green checkpoints
 
@@ -116,18 +112,19 @@ These are evidence points, not user approvals:
 - Phase 2 completion handoff: `c65eb5dfc8b84f6dc190679ee56d50033d13b308` / `33793827908`
 - Phase 3 first slice: `da9597471b166569e44a8ca8d35fd9dbd61791b4` / `33795979049`
 - Phase 3 synchronized handoff: `c9bbae3feb85a0a2dacc82a93cb6e5a456c45476` / `33796199258`
-- Phase 3 baseline submit-boundary fix: `06be5203eb21afd9712c0f53f3ec7dd44a459302` / `33797199974`
+- Phase 3 first submit-boundary fix: `06be5203eb21afd9712c0f53f3ec7dd44a459302` / `33797199974`
+- Phase 3 dedicated baseline route: `667de2a032433a6f5a0ae6226be7ac764c6ec86c` / `33798229165`
 
 ## Phase 3 live acceptance still required
 
-1. Pull `phase-3/baseline-dashboard` locally while preserving the linked development Shopify config.
-2. Verify `No baseline yet` still renders before the retry.
+1. Pull `phase-3/baseline-dashboard` locally while preserving the linked Shopify development config.
+2. Verify `No baseline yet` still renders.
 3. Click `Establish dev baseline` once.
-4. Verify one real COMPLETE baseline is persisted through CatalogGuard's own authenticated Admin client.
+4. Verify the request authenticates through `/app/baseline` and one real COMPLETE baseline is persisted.
 5. Verify current failures become `BASELINE_DEBT`, not regressions.
-6. Verify products/variants/evaluation/finding counts appear on Overview.
+6. Verify product/variant/evaluation/finding counts appear on Overview.
 7. Refresh and verify the persisted state remains without silently rerunning the scan.
-8. Verify a repeated baseline action cannot create a second baseline.
+8. Verify repeated baseline action cannot create a second baseline.
 9. Preserve any UNKNOWN / INDETERMINATE evidence distinctly.
 
 After live baseline acceptance: add Findings drill-down/history, immutable merchant policy editing through new revisions, exact exception create/revoke UI, preflight persistence/UI, webhook/incremental refresh paired with reconciliation, and evaluate Shopify Bulk Operations before production large-catalog scale.
