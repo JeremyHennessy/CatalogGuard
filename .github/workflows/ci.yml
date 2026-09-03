@@ -38,5 +38,10 @@ jobs:
       - name: Validate Prisma
         run: npm run prisma:validate
 
+      - name: Verify migrations from clean database
+        run: |
+          rm -f prisma/dev.sqlite prisma/dev.sqlite-journal
+          npm run prisma:migrate:deploy
+
       - name: Build
         run: npm run build
