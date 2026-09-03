@@ -29,7 +29,10 @@ test("Phase 1 catalog route contains no Shopify mutation", async () => {
 
   assert.match(route, /query CatalogGuardPhaseOneProducts/);
   assert.doesNotMatch(route, /\bmutation\b/);
-  assert.doesNotMatch(route, /productCreate|productUpdate|productVariantsBulkUpdate/);
+  assert.doesNotMatch(
+    route,
+    /productCreate|productUpdate|productVariantsBulkUpdate/,
+  );
 });
 
 test("environment example contains placeholders rather than token-shaped secrets", async () => {

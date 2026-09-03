@@ -66,7 +66,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   if (!payload.data) {
-    throw new Response("Shopify catalog query returned no data", { status: 502 });
+    throw new Response("Shopify catalog query returned no data", {
+      status: 502,
+    });
   }
 
   return {
@@ -87,21 +89,23 @@ export default function CatalogAccess() {
           version: {apiVersion}.
         </s-paragraph>
         <s-paragraph>
-          This page intentionally does not modify Shopify products. Its purpose is
-          to verify the minimum product read boundary before the rule engine is
-          introduced.
+          This page intentionally does not modify Shopify products. Its purpose
+          is to verify the minimum product read boundary before the rule engine
+          is introduced.
         </s-paragraph>
       </s-section>
 
       <s-section heading={`Products returned (${products.length})`}>
         {products.length === 0 ? (
-          <s-paragraph>No products were returned by the development store.</s-paragraph>
+          <s-paragraph>
+            No products were returned by the development store.
+          </s-paragraph>
         ) : (
           <s-unordered-list>
             {products.map((product) => (
               <s-list-item key={product.id}>
-                {product.title} — {product.status} — {product.variants.nodes.length}
-                {" "}variant(s)
+                {product.title} — {product.status} —{" "}
+                {product.variants.nodes.length} variant(s)
               </s-list-item>
             ))}
           </s-unordered-list>
