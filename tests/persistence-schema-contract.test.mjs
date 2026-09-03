@@ -42,10 +42,7 @@ test("migration contains the evidence-protecting uniqueness constraints", async 
     migration,
     /PolicyRevision_policyId_revisionNumber_key.*policyId.*revisionNumber/s,
   );
-  assert.match(
-    migration,
-    /Finding_shopId_findingKey_key.*shopId.*findingKey/s,
-  );
+  assert.match(migration, /Finding_shopId_findingKey_key.*shopId.*findingKey/s);
   assert.match(
     migration,
     /PreflightTarget_preflightRunId_resourceType_resourceGid_key.*preflightRunId.*resourceType.*resourceGid/s,
@@ -57,8 +54,14 @@ test("quality gate deploys migrations against a clean development database", asy
   const workflow = await read(".github/workflows/ci.yml");
   const packageJson = JSON.parse(await read("package.json"));
 
-  assert.equal(packageJson.scripts["prisma:migrate:deploy"], "prisma migrate deploy");
+  assert.equal(
+    packageJson.scripts["prisma:migrate:deploy"],
+    "prisma migrate deploy",
+  );
   assert.match(workflow, /Verify migrations from clean database/);
-  assert.match(workflow, /rm -f prisma\/dev\.sqlite prisma\/dev\.sqlite-journal/);
+  assert.match(
+    workflow,
+    /rm -f prisma\/dev\.sqlite prisma\/dev\.sqlite-journal/,
+  );
   assert.match(workflow, /npm run prisma:migrate:deploy/);
 });
