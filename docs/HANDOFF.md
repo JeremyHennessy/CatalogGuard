@@ -5,32 +5,33 @@ This file is the current-state resume point. Update it after meaningful merges/r
 ## Exact state
 
 ```text
-Date/time: 2026-09-03 11:56 ADT
+Date/time: 2026-09-03 13:19 ADT
 Canonical repository: JeremyHennessy/CatalogGuard
-Main SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
+Immutable main baseline SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
 Phase 1 branch: phase-1/shopify-scaffold
-Phase 1 SHA: 7c7172a91495ac0079381ca0ec5d3ad1a7434704
-Phase 1 PR: #11 (draft) — Shopify scaffold + development-store verification
+Phase 1 SHA: 86a7deeee8076cc71a3dccde762697d1db6a2543
+Phase 1 PR: #11 (draft)
 Active Phase 2 branch: phase-2/domain-rule-engine
-Phase 2 verified SHA before this handoff update: a547661bdbb3f017b911f781cee2ba270c50fa8d
+Phase 2 verified code/checkpoint SHA: 49dd4f6e49109cb5f3483238e17806df083a8950
 Phase 2 PR: #12 (draft, stacked on Phase 1)
 Shopify API version: 2026-07 / ApiVersion.July26
-Requested Shopify scopes: read_products only
-DB migration: prisma/migrations/20240530213853_create_session_table/migration.sql
-Development DB: Prisma + SQLite session storage
+Requested CatalogGuard Shopify scopes: read_products only
+Development DB: Prisma + SQLite session storage only; domain persistence is not implemented yet
 Deployment: none verified
-Shopify app/config: not linked to a real app; checked-in shopify.app.toml client_id remains empty
-Phase 1 CI: run 33766588063 — success on 7c7172a91495ac0079381ca0ec5d3ad1a7434704
-Phase 2 CI: run 33769657000 — success on a547661bdbb3f017b911f781cee2ba270c50fa8d
+Shopify development store: catalogguard-dev-p8tpcpjw.myshopify.com
+CatalogGuard installation handle: catalogguard-11
+CatalogGuard granted scopes observed on dev store: []
+Phase 1 CI: run 33774438006 — success on 86a7deeee8076cc71a3dccde762697d1db6a2543
+Phase 2 policy/lifecycle CI: run 33777845329 — success on 49dd4f6e49109cb5f3483238e17806df083a8950
 ```
 
 ## Current phase
 
-**Phase 2 — normalized catalog + deterministic rule-engine core**, stacked on an unmerged but repository-green Phase 1 scaffold.
+**Phase 2 — normalized catalog + deterministic rule engine + policy/lifecycle domain contracts**, stacked on an unmerged Phase 1 Shopify scaffold.
 
-Phase 1 repository work is implemented and CI-verified. Live Shopify development-store acceptance is still open and Phase 1 must not be called complete until that evidence exists.
+The domain layer now covers the first 15 deterministic catalog rules plus policy-revision validation, deterministic policy orchestration, enforcement dispositions, exact exceptions, finding identity/lifecycle, and preflight aggregation. The next dependency-safe engineering phase is persistence/schema work for those verified contracts.
 
-Phase 2 now has a normalized catalog/rule-engine foundation and an initial 15-rule deterministic catalog. Policy lifecycle, persistence, preflight orchestration, and the merchant-facing rule dashboard remain future work.
+Phase 1 repository work is CI-green but live Shopify acceptance is still incomplete. CatalogGuard is installed on the development store, but Shopify currently reports no granted scopes for the CatalogGuard installation. Do not call Phase 1 complete until CatalogGuard itself has `read_products` and its embedded React Router App Home is proven live.
 
 ## What is confirmed working
 
@@ -39,6 +40,7 @@ Phase 2 now has a normalized catalog/rule-engine foundation and an initial 15-ru
 Evidence-backed behavior on `phase-1/shopify-scaffold`:
 
 - Shopify React Router app foundation exists.
+- `shopify.web.toml` explicitly declares the React Router process as both `frontend` and `backend`; a scaffold regression test protects this descriptor.
 - GraphQL Admin API is pinned to `2026-07` in application and codegen configuration.
 - Local Shopify configuration requests only `read_products`.
 - The authenticated app route contains a read-only product/variant GraphQL query and no product mutation.
@@ -48,32 +50,22 @@ Evidence-backed behavior on `phase-1/shopify-scaffold`:
 - `package-lock.json` is committed and the permanent quality gate uses `npm ci`.
 - Node is fixed to `22.12.0` in CI.
 - React Router packages are aligned at `7.18.3` and Vite at `7.3.6` after direct non-major security fixes.
-- Phase 1 Quality Gate run `33766588063` completed successfully on SHA `7c7172a91495ac0079381ca0ec5d3ad1a7434704`.
+- Phase 1 Quality Gate run `33774438006` completed successfully on SHA `86a7deeee8076cc71a3dccde762697d1db6a2543`.
 
 ### Phase 2 normalized catalog and rule engine
 
-Evidence-backed behavior on `phase-2/domain-rule-engine`:
-
 - Versioned normalized Product/Variant evaluation model exists.
-- Evidence-bearing fields use explicit availability states:
-  - `AVAILABLE`
-  - `UNAVAILABLE`
-  - `NOT_REQUESTED`
-  - `UNRELIABLE`
-- Rule results retain the locked semantic contract:
-  - `PASS`
-  - `FAIL`
-  - `NOT_APPLICABLE`
-  - `UNKNOWN`
-- Severity and blocking remain separate policy metadata.
+- Evidence-bearing fields use explicit `AVAILABLE`, `UNAVAILABLE`, `NOT_REQUESTED`, and `UNRELIABLE` states.
+- Rule results retain `PASS`, `FAIL`, `NOT_APPLICABLE`, and `UNKNOWN`; `UNKNOWN` is never treated as PASS.
+- Severity and blocking remain independent policy metadata.
 - Product scope evaluation distinguishes `MATCH`, `NO_MATCH`, and `UNKNOWN`.
 - SKU/barcode uniqueness uses an explicit store-wide identifier-index abstraction with `COMPLETE`/`PARTIAL` completeness.
-- Identifier normalization is explicit (`EXACT` or `TRIM`); there is no implicit case folding.
-- Decimal price comparisons are deterministic string-based comparisons rather than floating-point coercion.
-- Rule implementation exceptions degrade to `UNKNOWN` rather than creating false PASS/FAIL states.
-- Domain tests are compiled separately and integrated into the permanent `npm test` gate.
+- Identifier normalization is explicit (`EXACT` or `TRIM`) with no implicit case folding.
+- Decimal price comparisons use deterministic string comparison rather than floating-point coercion.
+- Rule implementation exceptions degrade to `UNKNOWN`, never false PASS/FAIL.
+- Domain tests compile separately and run in the permanent `npm test` gate.
 
-Initial deterministic rule catalog:
+Deterministic rule catalog:
 
 1. `CG-SKU-001` — SKU required
 2. `CG-SKU-002` — SKU unique
@@ -93,7 +85,30 @@ Initial deterministic rule catalog:
 
 No additional Shopify scope was introduced for the 10→15 rule expansion.
 
-Permanent Quality Gate run `33769657000` completed successfully on SHA `a547661bdbb3f017b911f781cee2ba270c50fa8d` with:
+### Phase 2 policy, enforcement, lifecycle, and preflight contracts
+
+Verified on Phase 2 SHA `49dd4f6e49109cb5f3483238e17806df083a8950`:
+
+- `PolicyRevisionInputV1` and `ValidatedPolicyRevisionV1` provide versioned policy-revision contracts.
+- Policy revision validation resolves registered rule definitions, validates every rule config/scope, rejects duplicate `ruleCode@version` entries, and freezes the validated revision/rule containers.
+- `evaluatePolicyRevisionV1` evaluates products and variants in deterministic GID order against the exact revision ID.
+- Enforcement remains separate from technical rule status:
+  - PASS -> `COMPLIANT`
+  - FAIL -> `VIOLATION`
+  - FAIL + active exact exception -> `WAIVED`
+  - UNKNOWN -> `INDETERMINATE`
+  - NOT_APPLICABLE -> `NOT_APPLICABLE`
+- Exact V1 exceptions match shop + rule + resource + exact subresource identity; expiration/revocation affects enforcement only and never rewrites technical FAIL to PASS.
+- Stable finding identity excludes mutable titles/SKUs and is based on shop + rule + resource/subresource identity.
+- Finding lifecycle supports `BASELINE_DEBT`, `NEW_REGRESSION`, `REOPENED_REGRESSION`, `POLICY_CHANGE_FAILURE`, and `UNKNOWN_CAUSE`.
+- PASS resolves an open finding while preserving first-seen history; UNKNOWN does not falsely resolve debt; resolved failures can reopen with preserved history.
+- `reconcileFindingsV1` provides deterministic batch reconciliation and tests equivalence with incremental application.
+- Preflight aggregation implements the locked precedence: blocking violation -> `FAIL`; otherwise blocking indeterminate -> `INDETERMINATE`; otherwise blocking waiver -> `PASS_WITH_WAIVERS`; otherwise `PASS`.
+- Non-blocking issues are counted but do not fail preflight.
+
+Golden lifecycle/domain tests now cover baseline debt, new regression, resolution, reopened regression, active/expired/revoked exception behavior, policy-threshold change classification, UNKNOWN recovery, full-vs-incremental reconciliation equivalence, and preflight blocking semantics.
+
+Permanent Quality Gate run `33777845329` completed successfully on final head `49dd4f6e49109cb5f3483238e17806df083a8950` with:
 
 - locked dependency install;
 - formatting;
@@ -103,23 +118,33 @@ Permanent Quality Gate run `33769657000` completed successfully on SHA `a547661b
 - Prisma generation/schema validation;
 - production React Router build.
 
+## Live Shopify evidence
+
+Confirmed externally against `catalogguard-dev-p8tpcpjw.myshopify.com`:
+
+- The development store exists and contains Shopify-generated catalog fixtures.
+- The connected Shopify Admin integration can schema-validate and execute the `productVariants` query shape required by CatalogGuard and return real product variants, proving the store/schema/data are healthy.
+- `appInstallations` shows a distinct installed CatalogGuard app with handle `catalogguard-11`.
+- That CatalogGuard installation currently reports `accessScopes: []`.
+- The earlier CatalogGuard CLI `app execute` failure (`ACCESS_DENIED` for `productVariants`) is therefore explained by missing granted scope on CatalogGuard itself, not by an invalid GraphQL shape or missing product data.
+- The Shopify merchant Admin API can revoke scopes but does not provide a mechanism for one installed app to grant another app new scopes. CatalogGuard's `read_products` grant still has to pass through CatalogGuard's own Shopify CLI/OAuth/dev-preview installation flow.
+
 ## What is not verified
 
 ### Shopify live acceptance
 
-- No CatalogGuard app identity/client ID is linked in Shopify Dev Dashboard / Partner tooling.
-- No Shopify development-store installation is verified.
-- The embedded app has not been opened in a real Shopify admin from this workspace.
-- The requested `read_products` grant has not been inspected after a real install.
-- The product/variant GraphQL query has not yet been executed against real dev-store data.
-- Session/token refresh behavior has not been exercised against Shopify.
-- Phase 2 normalized Shopify adapter mappings beyond the existing Phase 1 source probe have not been live-verified.
+- CatalogGuard itself has not yet been observed with `read_products` granted on the development store.
+- The embedded React Router App Home has not yet been revalidated after the `shopify.web.toml` scaffold fix.
+- CatalogGuard's own authenticated product/variant request has therefore not yet succeeded live.
+- Session/offline-token refresh behavior has not been exercised against Shopify.
+- Normalized Shopify adapter mappings beyond the existing Phase 1 source probe are not yet live-verified.
 
-### Product lifecycle/persistence
+### Persistence/product runtime
 
 - No production host or production PostgreSQL database is verified.
-- Findings/policies/policy revisions/baselines/regressions/exceptions are not yet persisted in the application runtime.
-- No preflight orchestration or final policy disposition layer is implemented yet.
+- Policy, PolicyRevision, PolicyRule, Evaluation, Finding, FindingEvent, Exception, Preflight, and normalized catalog state are not persisted yet.
+- The policy/lifecycle contracts are domain-only at this checkpoint.
+- No scan/reconciliation runtime has been wired to persistence or Shopify webhooks yet.
 - No polished rule/policy dashboard is implemented.
 - No billing integration or App Store submission is verified.
 
@@ -135,47 +160,42 @@ The immutable repository baseline remains `main` SHA `1a540cd3ea73b9b03e3830b8b9
 
 Repository-green implementation checkpoints are evidence points, not user approvals:
 
-- Phase 1: `7c7172a91495ac0079381ca0ec5d3ad1a7434704`
+- Phase 1 Shopify scaffold + web descriptor: `86a7deeee8076cc71a3dccde762697d1db6a2543`
 - Phase 2 10-rule core: `1ff4ee9f559838e8e4d096c7f4cf984241bb1fc3`
 - Phase 2 15-rule core: `a547661bdbb3f017b911f781cee2ba270c50fa8d`
+- Phase 2 policy/lifecycle contracts: `49dd4f6e49109cb5f3483238e17806df083a8950`
 
 ## Current blockers
 
-### B1 — Live Shopify acceptance requires an authenticated Shopify developer account/dev store
+### B1 — CatalogGuard live permission/app-home acceptance
 
-Evidence: this workspace has GitHub access but no connected Shopify account/tool. The checked-in `shopify.app.toml` still has an empty `client_id`, and no live install/session evidence exists.
+The Dev store and CatalogGuard installation now exist, but CatalogGuard currently has no granted scopes. The next external acceptance action remains:
 
-Smallest next external test:
+```powershell
+cd C:\Users\JeremyHennessy\CatalogGuard
+git pull --ff-only
+shopify app dev --config development --store catalogguard-dev-p8tpcpjw.myshopify.com
+```
 
-1. clone the repository locally and check out `phase-1/shopify-scaffold` for the simplest app-view test, or `phase-2/domain-rule-engine` for the latest code;
-2. install/use current Shopify CLI with Node `>=22.12.0`;
-3. create or select a Shopify development store;
-4. run `shopify app config link` to create/link the real CatalogGuard development app configuration;
-5. validate/select that configuration;
-6. run `shopify app dev` and choose the dev store;
-7. install/open the embedded app;
-8. verify the requested scope is only `read_products`;
-9. verify real products/variants appear on the CatalogGuard Phase 1 page;
-10. record the linked app/config identity and live evidence here.
+Keep the dev process running, accept the development URL/permission update, then verify through Shopify that CatalogGuard has `read_products` and that the embedded React Router App Home loads.
 
 ### B2 — Remaining dependency advisories need separate compatibility work
 
-Do not run `npm audit fix --force`. Investigate the remaining dependency families independently after preserving the current green checkpoints.
+Do not run `npm audit fix --force`. Investigate remaining dependency families independently after preserving green checkpoints.
 
 ## Next engineering work
 
-The Phase 2 contract is now stable across 15 rules. Continue without redesigning the app shell:
+The domain contracts required before persistence are now green. Continue in bounded slices:
 
-1. define deterministic policy-evaluation orchestration over the rule registry;
-2. define immutable PolicyRevision input/output contracts at the domain layer;
-3. define enforcement disposition (`COMPLIANT`, `VIOLATION`, `WAIVED`, `INDETERMINATE`, `NOT_APPLICABLE`);
-4. define exact finding identity and lifecycle contracts, including baseline debt vs new/reopened regression;
-5. define exact waiver/exception matching without rewriting technical FAIL to PASS;
-6. define preflight aggregation to `PASS`, `PASS_WITH_WAIVERS`, `FAIL`, or `INDETERMINATE`;
-7. add fixture-driven golden lifecycle tests for baseline debt, regression, resolution, reopen, exception create/expire/revoke, policy-change failure, and UNKNOWN recovery;
-8. only then design persistence/migrations for policies, findings, evaluations, baselines, and exceptions;
-9. defer weight/inventory/cost rules until exact Shopify fields/scopes are verified against a real development store;
-10. keep UI expansion behind verified domain and persistence contracts.
+1. design Prisma persistence for Policy, immutable PolicyRevision/PolicyRule snapshots, Evaluation, Finding, FindingEvent, exact Exception, and PreflightRun/PreflightTarget while preserving the verified domain semantics;
+2. make the migration reproducible from a clean database and test uniqueness/index constraints, especially stable finding identity and immutable policy revision numbering;
+3. add repository/store abstractions so domain code remains free of Prisma calls and route/UI business logic;
+4. persist evaluation/finding transitions transactionally, including reopen history and exception linkage;
+5. add a deterministic full-reconciliation application service and verify replay/idempotency against persisted state;
+6. only then add Shopify adapter mapping from Admin GraphQL into the normalized Product/Variant model and run it against the Dev-store fixture catalog;
+7. wire a first useful merchant-facing scan/policy dashboard after persistence and live adapter behavior are verified;
+8. defer weight/inventory/cost rules until exact fields/scopes are verified for CatalogGuard itself;
+9. keep PR #12 draft and do not merge ahead of Phase 1/live acceptance.
 
 ## Product definition locked at baseline
 
@@ -183,26 +203,20 @@ CatalogGuard is:
 
 > Shopify catalog policy + regression detection + exceptions + preflight QA.
 
-CatalogGuard is **not** primarily:
-
-- a generic health score;
-- an SEO tool;
-- an AI copywriter;
-- a PIM;
-- a catalog backup/revert product;
-- an automatic bulk fixer;
-- a workflow engine.
+CatalogGuard is **not** primarily a generic health score, SEO tool, AI copywriter, PIM, catalog backup/revert product, automatic bulk fixer, or workflow engine.
 
 ## Core semantic guardrails
 
 - Rule results remain `PASS`, `FAIL`, `NOT_APPLICABLE`, and `UNKNOWN`.
 - `UNKNOWN` is never silently treated as PASS.
 - Severity and policy blocking are separate concepts.
-- Active waivers change disposition but do not rewrite a failed rule evaluation as PASS.
+- Active waivers change enforcement disposition but do not rewrite a failed rule evaluation as PASS.
 - Policy revisions are immutable for historical evidence.
 - Baseline debt remains distinct from later regressions.
+- Policy-created failures remain distinct from data regressions where evidence allows.
 - Preflight supports `PASS`, `PASS_WITH_WAIVERS`, `FAIL`, and `INDETERMINATE`.
 - Webhook detection must be paired with reconciliation.
+- Persistence adapters must not leak into framework-independent domain rule logic.
 
 ## Resume warning
 
