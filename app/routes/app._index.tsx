@@ -1,21 +1,11 @@
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import type {
-  ActionFunctionArgs,
-  HeadersFunction,
-  LoaderFunctionArgs,
-} from "react-router";
-import { redirect, useLoaderData, useSubmit } from "react-router";
-import { developmentBaselineScanIdV1 } from "../domain/policy/dev-validation-template";
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useSubmit } from "react-router";
 import { authenticate } from "../shopify.server";
-import { loadExactRuleExceptionsForEvaluationV1 } from "../services/exceptions/exact-exceptions.server";
 import { loadCatalogGuardOverviewV1 } from "../services/overview/overview.server";
-import { ensureDevValidationPolicyV1 } from "../services/policies/dev-validation-policy.server";
-import { runShopifyCatalogPolicyScanV1 } from "../services/scans/catalog-policy-scan.server";
 import { ensureCatalogGuardShopV1 } from "../services/shops/shop-record.server";
 
 const API_VERSION = "2026-07";
-const ENGINE_VERSION = "catalogguard-policy-v1";
-const ESTABLISH_BASELINE_INTENT = "establish-dev-baseline";
 
 async function authenticatedShop(request: Request) {
   const { admin, session } = await authenticate.admin(request);
@@ -26,7 +16,7 @@ async function authenticatedShop(request: Request) {
     apiVersion: API_VERSION,
   });
 
-  return { admin, session, shop };
+  return { session, shop };
 }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -40,46 +30,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const formData = await request.formData();
-  const intent = formData.get("intent");
-
-  if (intent !== ESTABLISH_BASELINE_INTENT) {
-    throw new Response("Unsupported CatalogGuard action", { status: 400 });
-  }
-
-  const { admin, shop } = await authenticatedShop(request);
-  const overview = await loadCatalogGuardOverviewV1(shop.id);
-
-  if (overview.baseline) {
-    return redirect("/app");
-  }
-
-  const now = new Date().toISOString();
-  const revision = await ensureDevValidationPolicyV1({
-    shopId: shop.id,
-    createdAt: now,
-  });
-  const exceptions = await loadExactRuleExceptionsForEvaluationV1(shop.id);
-
-  await runShopifyCatalogPolicyScanV1({
-    admin,
-    scanId: developmentBaselineScanIdV1(shop.id),
-    shopId: shop.id,
-    scanType: "BASELINE",
-    apiVersion: API_VERSION,
-    engineVersion: ENGINE_VERSION,
-    startedAt: now,
-    observedAt: now,
-    finishedAt: now,
-    revision,
-    exceptions,
-    baseline: true,
-  });
-
-  return redirect("/app");
-};
-
 function displayDate(value: string | undefined) {
   if (!value) return "Not recorded";
   return new Date(value).toLocaleString();
@@ -91,10 +41,7 @@ export default function CatalogGuardOverview() {
   const latest = overview.latestComplete;
 
   const establishBaseline = () =>
-    submit(
-      { intent: ESTABLISH_BASELINE_INTENT },
-      { method: "post", encType: "application/x-www-form-urlencoded" },
-    );
+    submit(null, { method: "post", action: "/app/baseline" });
 
   return (
     <s-page heading="CatalogGuard">
