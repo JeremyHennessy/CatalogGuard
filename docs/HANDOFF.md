@@ -5,14 +5,14 @@ This file is the current-state resume point. Update it after meaningful merges/r
 ## Exact state
 
 ```text
-Date/time: 2026-09-03 11:49 ADT
+Date/time: 2026-09-03 11:56 ADT
 Canonical repository: JeremyHennessy/CatalogGuard
 Main SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
 Phase 1 branch: phase-1/shopify-scaffold
 Phase 1 SHA: 7c7172a91495ac0079381ca0ec5d3ad1a7434704
 Phase 1 PR: #11 (draft) — Shopify scaffold + development-store verification
 Active Phase 2 branch: phase-2/domain-rule-engine
-Phase 2 verified SHA before this handoff update: 1ff4ee9f559838e8e4d096c7f4cf984241bb1fc3
+Phase 2 verified SHA before this handoff update: a547661bdbb3f017b911f781cee2ba270c50fa8d
 Phase 2 PR: #12 (draft, stacked on Phase 1)
 Shopify API version: 2026-07 / ApiVersion.July26
 Requested Shopify scopes: read_products only
@@ -21,7 +21,7 @@ Development DB: Prisma + SQLite session storage
 Deployment: none verified
 Shopify app/config: not linked to a real app; checked-in shopify.app.toml client_id remains empty
 Phase 1 CI: run 33766588063 — success on 7c7172a91495ac0079381ca0ec5d3ad1a7434704
-Phase 2 CI: run 33768984629 — success on 1ff4ee9f559838e8e4d096c7f4cf984241bb1fc3
+Phase 2 CI: run 33769657000 — success on a547661bdbb3f017b911f781cee2ba270c50fa8d
 ```
 
 ## Current phase
@@ -30,7 +30,7 @@ Phase 2 CI: run 33768984629 — success on 1ff4ee9f559838e8e4d096c7f4cf984241bb1
 
 Phase 1 repository work is implemented and CI-verified. Live Shopify development-store acceptance is still open and Phase 1 must not be called complete until that evidence exists.
 
-Phase 2 has progressed through a first normalized catalog/rule-engine foundation and an initial 10-rule deterministic catalog. It is not yet a complete policy/finding lifecycle.
+Phase 2 now has a normalized catalog/rule-engine foundation and an initial 15-rule deterministic catalog. Policy lifecycle, persistence, preflight orchestration, and the merchant-facing rule dashboard remain future work.
 
 ## What is confirmed working
 
@@ -85,8 +85,15 @@ Initial deterministic rule catalog:
 8. `CG-VENDOR-001` — vendor required + optional exact allow-list
 9. `CG-TYPE-001` — product type required + optional exact allow-list
 10. `CG-MEDIA-001` — minimum media count
+11. `CG-SEO-001` — SEO title required/minimum length
+12. `CG-SEO-002` — SEO description required/minimum length
+13. `CG-CAT-001` — Shopify category required
+14. `CG-TAG-001` — exact required-tag policy with explicit ALL/ANY matching
+15. `CG-OPT-001` — required variant option names
 
-Permanent Quality Gate run `33768984629` completed successfully on SHA `1ff4ee9f559838e8e4d096c7f4cf984241bb1fc3` with:
+No additional Shopify scope was introduced for the 10→15 rule expansion.
+
+Permanent Quality Gate run `33769657000` completed successfully on SHA `a547661bdbb3f017b911f781cee2ba270c50fa8d` with:
 
 - locked dependency install;
 - formatting;
@@ -130,6 +137,7 @@ Repository-green implementation checkpoints are evidence points, not user approv
 
 - Phase 1: `7c7172a91495ac0079381ca0ec5d3ad1a7434704`
 - Phase 2 10-rule core: `1ff4ee9f559838e8e4d096c7f4cf984241bb1fc3`
+- Phase 2 15-rule core: `a547661bdbb3f017b911f781cee2ba270c50fa8d`
 
 ## Current blockers
 
@@ -156,17 +164,18 @@ Do not run `npm audit fix --force`. Investigate the remaining dependency familie
 
 ## Next engineering work
 
-Continue from the green Phase 2 checkpoint without redesigning the app shell:
+The Phase 2 contract is now stable across 15 rules. Continue without redesigning the app shell:
 
 1. define deterministic policy-evaluation orchestration over the rule registry;
 2. define immutable PolicyRevision input/output contracts at the domain layer;
-3. define Finding identity and lifecycle contracts, including baseline debt vs regression;
-4. define waiver/exception disposition without rewriting technical FAIL to PASS;
-5. define preflight aggregation to `PASS`, `PASS_WITH_WAIVERS`, `FAIL`, or `INDETERMINATE`;
-6. add fixture-driven tests for policy blocking, UNKNOWN blocking behavior, waivers, baseline/regression transitions, and reproducibility;
-7. only then design persistence/migrations for policies, findings, evaluations, baselines, and exceptions;
-8. defer weight/inventory/cost rules until exact Shopify fields/scopes are verified against a real development store;
-9. keep UI expansion behind verified domain and persistence contracts.
+3. define enforcement disposition (`COMPLIANT`, `VIOLATION`, `WAIVED`, `INDETERMINATE`, `NOT_APPLICABLE`);
+4. define exact finding identity and lifecycle contracts, including baseline debt vs new/reopened regression;
+5. define exact waiver/exception matching without rewriting technical FAIL to PASS;
+6. define preflight aggregation to `PASS`, `PASS_WITH_WAIVERS`, `FAIL`, or `INDETERMINATE`;
+7. add fixture-driven golden lifecycle tests for baseline debt, regression, resolution, reopen, exception create/expire/revoke, policy-change failure, and UNKNOWN recovery;
+8. only then design persistence/migrations for policies, findings, evaluations, baselines, and exceptions;
+9. defer weight/inventory/cost rules until exact Shopify fields/scopes are verified against a real development store;
+10. keep UI expansion behind verified domain and persistence contracts.
 
 ## Product definition locked at baseline
 
