@@ -1,0 +1,36 @@
+name: Security Lock Bootstrap
+
+on:
+  push:
+    branches:
+      - phase-1/shopify-scaffold
+
+permissions:
+  contents: write
+
+jobs:
+  security-lock-bootstrap:
+    if: contains(github.event.head_commit.message, '[security-lock-bootstrap]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: phase-1/shopify-scaffold
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - name: Regenerate and commit lockfile
+        shell: bash
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --cached --quiet && exit 1
+          git commit -m "Lock React Router and Vite security updates"
+          git push origin HEAD:phase-1/shopify-scaffold
