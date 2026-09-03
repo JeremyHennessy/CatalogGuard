@@ -119,9 +119,9 @@ export function normalizeShopifyCatalogV1(
         `product ${productSource.id} variantsCount`,
       );
 
-      const variants = [...(variantsByProduct.get(productSource.id) ?? [])].sort(
-        (a, b) => a.gid.localeCompare(b.gid),
-      );
+      const variants = [
+        ...(variantsByProduct.get(productSource.id) ?? []),
+      ].sort((a, b) => a.gid.localeCompare(b.gid));
 
       if (variants.length !== productSource.variantsCount.count) {
         complete = false;
@@ -157,7 +157,10 @@ export function normalizeShopifyCatalogV1(
     identifierIndex.upsertVariant({
       productGid: variant.productGid,
       variantGid: variant.gid,
-      sku: variant.sku.availability === "AVAILABLE" ? variant.sku.value : undefined,
+      sku:
+        variant.sku.availability === "AVAILABLE"
+          ? variant.sku.value
+          : undefined,
       barcode:
         variant.barcode.availability === "AVAILABLE"
           ? variant.barcode.value

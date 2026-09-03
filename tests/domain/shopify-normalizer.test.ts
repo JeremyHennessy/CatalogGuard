@@ -55,7 +55,10 @@ function source(
 }
 
 test("Shopify query contracts use independent paginated product and variant streams", () => {
-  assert.match(SHOPIFY_PRODUCTS_QUERY_V1, /products\(first: \$first, after: \$after, sortKey: ID\)/);
+  assert.match(
+    SHOPIFY_PRODUCTS_QUERY_V1,
+    /products\(first: \$first, after: \$after, sortKey: ID\)/,
+  );
   assert.match(SHOPIFY_PRODUCTS_QUERY_V1, /variantsCount/);
   assert.match(SHOPIFY_PRODUCTS_QUERY_V1, /pageInfo/);
   assert.doesNotMatch(SHOPIFY_PRODUCTS_QUERY_V1, /\bvariants\s*\(/);
@@ -100,7 +103,10 @@ test("variant-count mismatch degrades completeness instead of claiming a complet
   );
 
   assert.equal(partial.completeness, "PARTIAL");
-  assert.match(partial.warnings.join("\n"), /expected 2 variants but normalized 1/);
+  assert.match(
+    partial.warnings.join("\n"),
+    /expected 2 variants but normalized 1/,
+  );
   assert.equal(
     partial.identifierIndex.lookup("SKU", "SKU-1", "EXACT").completeness,
     "PARTIAL",
@@ -113,7 +119,10 @@ test("unfinished connection pagination degrades completeness even when counts ha
   );
 
   assert.equal(partial.completeness, "PARTIAL");
-  assert.match(partial.warnings.join("\n"), /product pagination did not reach the end/);
+  assert.match(
+    partial.warnings.join("\n"),
+    /product pagination did not reach the end/,
+  );
 });
 
 test("complete product stream rejects orphan variants", () => {
