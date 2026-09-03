@@ -82,7 +82,10 @@ function stableId(prefix: string, value: unknown) {
   return `${prefix}_${sha256(canonicalJsonStringify(value)).slice(0, 40)}`;
 }
 
-function findingKeyForEvaluation(shopId: string, evaluation: PolicyEvaluationV1) {
+function findingKeyForEvaluation(
+  shopId: string,
+  evaluation: PolicyEvaluationV1,
+) {
   return findingKeyFor({
     shopId,
     ruleCode: evaluation.result.ruleCode,
@@ -197,10 +200,7 @@ export function buildScanPersistencePlanV1(
     changeCause: input.changeCause,
     changeCauseByFindingKey: input.changeCauseByFindingKey,
   });
-  const latestEvaluationByFindingKey = new Map<
-    string,
-    PlannedEvaluationV1
-  >();
+  const latestEvaluationByFindingKey = new Map<string, PlannedEvaluationV1>();
   const evaluationByFindingAndTime = new Map<string, PlannedEvaluationV1>();
 
   for (const planned of plannedEvaluations) {
@@ -221,7 +221,9 @@ export function buildScanPersistencePlanV1(
   const findings = reconciliation.findings.map((state) => {
     const latest = latestEvaluationByFindingKey.get(state.findingKey);
     if (!latest) {
-      throw new Error(`finding ${state.findingKey} has no evaluation in this scan`);
+      throw new Error(
+        `finding ${state.findingKey} has no evaluation in this scan`,
+      );
     }
 
     return Object.freeze({

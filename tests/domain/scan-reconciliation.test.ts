@@ -45,9 +45,7 @@ function evaluation(input: {
       ruleCode: input.ruleCode ?? "CG-SKU-001",
       ruleVersion: 1,
       resourceGid: input.resourceGid,
-      ...(input.subresourceGid
-        ? { subresourceGid: input.subresourceGid }
-        : {}),
+      ...(input.subresourceGid ? { subresourceGid: input.subresourceGid } : {}),
       message: `${status} fixture`,
     },
     enforcement:
@@ -87,8 +85,14 @@ test("scan persistence plan is deterministic regardless of evaluation input orde
   assert.deepEqual(first, second);
   assert.equal(first.findings.length, 2);
   assert.equal(first.findingEvents.length, 2);
-  assert.ok(first.findings.every((finding) => finding.state.classification === "BASELINE_DEBT"));
-  assert.ok(first.findingEvents.every((event) => event.eventType === "CREATED"));
+  assert.ok(
+    first.findings.every(
+      (finding) => finding.state.classification === "BASELINE_DEBT",
+    ),
+  );
+  assert.ok(
+    first.findingEvents.every((event) => event.eventType === "CREATED"),
+  );
 });
 
 test("scan fingerprint changes when immutable scan input changes", () => {

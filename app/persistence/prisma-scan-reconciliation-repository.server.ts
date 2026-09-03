@@ -140,8 +140,7 @@ async function validatePersistedException(
     exception.shopId !== input.scan.shopId ||
     exception.ruleCode !== evaluation.ruleCode ||
     exception.resourceGid !== evaluation.result.resourceGid ||
-    (exception.subresourceGid ?? undefined) !==
-      evaluation.result.subresourceGid
+    (exception.subresourceGid ?? undefined) !== evaluation.result.subresourceGid
   ) {
     throw new Error(
       `persisted exception ${exceptionId} does not exactly match evaluation evidence`,
@@ -286,7 +285,10 @@ export class PrismaScanReconciliationRepository
             message: evaluation.result.message,
             reasonCode: evaluation.result.reasonCode,
             evidenceJson: optionalCanonicalJson(evaluation.result.evidence),
-            evaluatedAt: dateFromIso(evaluation.evaluatedAt, "evaluation evaluatedAt"),
+            evaluatedAt: dateFromIso(
+              evaluation.evaluatedAt,
+              "evaluation evaluatedAt",
+            ),
             scan: { connect: { id: input.scan.id } },
             policyRevision: {
               connect: { id: input.scan.policyRevisionId },
@@ -322,7 +324,10 @@ export class PrismaScanReconciliationRepository
             data: {
               currentStatus: state.currentStatus,
               classification: state.classification,
-              firstSeenAt: dateFromIso(state.firstSeenAt, "finding firstSeenAt"),
+              firstSeenAt: dateFromIso(
+                state.firstSeenAt,
+                "finding firstSeenAt",
+              ),
               lastSeenAt: dateFromIso(state.lastSeenAt, "finding lastSeenAt"),
               resolvedAt: state.resolvedAt
                 ? dateFromIso(state.resolvedAt, "finding resolvedAt")
@@ -344,7 +349,10 @@ export class PrismaScanReconciliationRepository
               subresourceGid: state.subresourceGid,
               currentStatus: state.currentStatus,
               classification: state.classification,
-              firstSeenAt: dateFromIso(state.firstSeenAt, "finding firstSeenAt"),
+              firstSeenAt: dateFromIso(
+                state.firstSeenAt,
+                "finding firstSeenAt",
+              ),
               lastSeenAt: dateFromIso(state.lastSeenAt, "finding lastSeenAt"),
               resolvedAt: state.resolvedAt
                 ? dateFromIso(state.resolvedAt, "finding resolvedAt")
@@ -364,7 +372,10 @@ export class PrismaScanReconciliationRepository
           data: {
             id: event.id,
             eventType: event.eventType,
-            createdAt: dateFromIso(event.occurredAt, "finding event occurredAt"),
+            createdAt: dateFromIso(
+              event.occurredAt,
+              "finding event occurredAt",
+            ),
             metadataJson: canonicalJsonStringify({
               policyRevisionId: event.policyRevisionId,
             }),
