@@ -24,6 +24,17 @@ test("Phase 1 scopes are read-only and catalog-only", async () => {
   assert.doesNotMatch(envExample, /write_products|read_customers|read_orders/);
 });
 
+test("Shopify CLI recognizes the React Router web process", async () => {
+  const webConfig = await read("shopify.web.toml");
+
+  assert.match(webConfig, /roles = \["frontend", "backend"\]/);
+  assert.match(webConfig, /predev = "npm exec prisma generate"/);
+  assert.match(
+    webConfig,
+    /dev = "npm exec prisma migrate deploy && npm exec react-router dev"/,
+  );
+});
+
 test("Phase 1 catalog route contains no Shopify mutation", async () => {
   const route = await read("app/routes/app._index.tsx");
 
