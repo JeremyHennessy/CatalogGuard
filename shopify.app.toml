@@ -1,0 +1,16 @@
+# Shopify CLI will populate client_id when this repository is linked to the real app.
+client_id = ""
+
+[access_scopes]
+scopes = "read_products"
+
+[webhooks]
+api_version = "2026-07"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = ["app/uninstalled"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/scopes_update"
+  topics = ["app/scopes_update"]
