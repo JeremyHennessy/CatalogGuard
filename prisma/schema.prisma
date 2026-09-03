@@ -26,3 +26,253 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model Shop {
+  id                       String    @id @default(cuid())
+  shopifyShopId            String    @unique
+  shopDomain               String    @unique
+  status                   String    @default("ACTIVE")
+  currentScopes            String?
+  apiVersion               String
+  installedAt              DateTime  @default(now())
+  uninstalledAt            DateTime?
+  redactedAt               DateTime?
+  lastSuccessfulFullScanAt DateTime?
+  lastWebhookObservedAt    DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  policies                 Policy[]
+  scans                    Scan[]
+  findings                 Finding[]
+  exceptions               RuleException[]
+  preflightRuns            PreflightRun[]
+}
+
+model Policy {
+  id               String           @id @default(cuid())
+  shopId           String
+  name             String
+  description      String?
+  status           String           @default("ACTIVE")
+  activeRevisionId String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  shop             Shop             @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  revisions        PolicyRevision[] @relation("PolicyRevisions")
+
+  @@index([shopId, status])
+  @@index([activeRevisionId])
+}
+
+model PolicyRevision {
+  id                  String         @id @default(cuid())
+  policyId            String
+  revisionNumber      Int
+  nameSnapshot        String
+  descriptionSnapshot String?
+  schemaVersion       Int
+  createdAt           DateTime       @default(now())
+  createdByActor      String?
+  changeSummary       String?
+  policy              Policy         @relation("PolicyRevisions", fields: [policyId], references: [id], onDelete: Restrict)
+  rules               PolicyRule[]
+  scans               Scan[]
+  evaluations         Evaluation[]
+  preflightRuns       PreflightRun[]
+
+  @@unique([policyId, revisionNumber])
+  @@index([policyId, createdAt])
+}
+
+model PolicyRule {
+  id               String         @id @default(cuid())
+  policyRevisionId String
+  ruleCode         String
+  ruleVersion      Int
+  enabled          Boolean
+  severity         String
+  blocking         Boolean
+  configJson       String
+  scopeJson        String
+  merchantLabel    String?
+  merchantNotes    String?
+  position         Int?
+  revision         PolicyRevision @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  evaluations      Evaluation[]
+
+  @@unique([policyRevisionId, ruleCode, ruleVersion])
+  @@index([policyRevisionId, position])
+}
+
+model Scan {
+  id                 String          @id @default(cuid())
+  shopId             String
+  scanType           String
+  status             String
+  policyRevisionId   String?
+  apiVersion         String
+  engineVersion      String
+  normalizationVersion String
+  startedAt          DateTime        @default(now())
+  finishedAt         DateTime?
+  sourceWatermark    String?
+  productsExpected   Int?
+  productsProcessed  Int             @default(0)
+  variantsProcessed  Int             @default(0)
+  passCount           Int             @default(0)
+  failCount           Int             @default(0)
+  unknownCount        Int             @default(0)
+  notApplicableCount  Int             @default(0)
+  warningCount        Int             @default(0)
+  errorSummary        String?
+  metadataJson        String?
+  shop                Shop            @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  policyRevision      PolicyRevision? @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  evaluations         Evaluation[]
+  findingEvents       FindingEvent[]
+  preflightRun        PreflightRun?
+
+  @@index([shopId, status, startedAt])
+  @@index([policyRevisionId])
+}
+
+model Evaluation {
+  id                 String          @id @default(cuid())
+  scanId             String
+  policyRevisionId   String
+  policyRuleId       String
+  exceptionId        String?
+  ruleCode           String
+  ruleVersion        Int
+  resourceGid        String
+  subresourceGid     String?
+  status             String
+  enforcement        String
+  observedJson       String?
+  expectedJson       String?
+  message            String
+  reasonCode         String?
+  evidenceJson       String?
+  evaluatedAt        DateTime        @default(now())
+  scan               Scan            @relation(fields: [scanId], references: [id], onDelete: Restrict)
+  policyRevision     PolicyRevision  @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  policyRule         PolicyRule      @relation(fields: [policyRuleId], references: [id], onDelete: Restrict)
+  exception          RuleException?  @relation(fields: [exceptionId], references: [id], onDelete: SetNull)
+  findingEvents      FindingEvent[]
+  latestForFindings  Finding[]       @relation("LatestFindingEvaluation")
+
+  @@index([scanId])
+  @@index([policyRevisionId, ruleCode])
+  @@index([resourceGid, subresourceGid])
+  @@index([exceptionId])
+}
+
+model Finding {
+  id                 String       @id @default(cuid())
+  shopId             String
+  findingKey         String
+  ruleCode           String
+  resourceType       String
+  resourceGid        String
+  subresourceGid     String?
+  fieldKey           String?
+  currentStatus      String
+  classification     String
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  resolvedAt         DateTime?
+  reopenedCount      Int          @default(0)
+  latestEvaluationId String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  shop               Shop         @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  latestEvaluation   Evaluation   @relation("LatestFindingEvaluation", fields: [latestEvaluationId], references: [id], onDelete: Restrict)
+  events             FindingEvent[]
+  exceptions         RuleException[]
+
+  @@unique([shopId, findingKey])
+  @@index([shopId, currentStatus, classification])
+  @@index([shopId, ruleCode])
+  @@index([latestEvaluationId])
+}
+
+model RuleException {
+  id               String         @id @default(cuid())
+  shopId           String
+  findingId        String?
+  ruleCode         String
+  resourceGid      String
+  subresourceGid   String?
+  coverageType     String         @default("FINDING_EXACT")
+  reason           String
+  notes            String?
+  createdByActor   String?
+  createdAt        DateTime       @default(now())
+  expiresAt        DateTime?
+  revokedAt        DateTime?
+  revokedByActor   String?
+  revocationReason String?
+  shop             Shop           @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  finding          Finding?       @relation(fields: [findingId], references: [id], onDelete: Restrict)
+  evaluations      Evaluation[]
+  findingEvents    FindingEvent[]
+
+  @@index([shopId, ruleCode, resourceGid, subresourceGid])
+  @@index([findingId, createdAt])
+}
+
+model FindingEvent {
+  id           String         @id @default(cuid())
+  findingId    String
+  eventType    String
+  scanId       String?
+  evaluationId String?
+  exceptionId  String?
+  metadataJson String?
+  createdAt    DateTime       @default(now())
+  finding      Finding        @relation(fields: [findingId], references: [id], onDelete: Restrict)
+  scan         Scan?          @relation(fields: [scanId], references: [id], onDelete: Restrict)
+  evaluation   Evaluation?    @relation(fields: [evaluationId], references: [id], onDelete: Restrict)
+  exception    RuleException? @relation(fields: [exceptionId], references: [id], onDelete: Restrict)
+
+  @@index([findingId, createdAt])
+  @@index([scanId])
+  @@index([evaluationId])
+  @@index([exceptionId])
+}
+
+model PreflightRun {
+  id                         String          @id @default(cuid())
+  shopId                     String
+  scanId                     String          @unique
+  policyRevisionId           String
+  targetType                 String
+  status                     String
+  outcome                    String?
+  targetDefinitionJson       String
+  sourceFreshnessAt          DateTime?
+  blockingViolationCount     Int             @default(0)
+  waiverCount                Int             @default(0)
+  indeterminateBlockingCount Int             @default(0)
+  createdByActor             String?
+  createdAt                  DateTime        @default(now())
+  completedAt                DateTime?
+  shop                       Shop            @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  scan                       Scan            @relation(fields: [scanId], references: [id], onDelete: Restrict)
+  policyRevision             PolicyRevision  @relation(fields: [policyRevisionId], references: [id], onDelete: Restrict)
+  targets                    PreflightTarget[]
+
+  @@index([shopId, createdAt])
+  @@index([policyRevisionId, status])
+}
+
+model PreflightTarget {
+  id                  String       @id @default(cuid())
+  preflightRunId      String
+  resourceType        String
+  resourceGid         String
+  resourceFingerprint String
+  preflightRun        PreflightRun @relation(fields: [preflightRunId], references: [id], onDelete: Restrict)
+
+  @@unique([preflightRunId, resourceType, resourceGid])
+}
