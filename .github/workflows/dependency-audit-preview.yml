@@ -1,0 +1,61 @@
+name: Dependency Audit Preview
+
+on:
+  push:
+    branches:
+      - phase-1/shopify-scaffold
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    if: contains(github.event.head_commit.message, '[audit-preview]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Classify npm audit findings
+        shell: bash
+        run: |
+          npm audit --json > audit.json || true
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const audit = JSON.parse(fs.readFileSync("audit.json", "utf8"));
+          console.log("AUDIT_METADATA", JSON.stringify(audit.metadata?.vulnerabilities ?? {}));
+          for (const [name, item] of Object.entries(audit.vulnerabilities ?? {})) {
+            const via = (item.via ?? []).map((entry) =>
+              typeof entry === "string"
+                ? entry
+                : {
+                    source: entry.source,
+                    name: entry.name,
+                    title: entry.title,
+                    severity: entry.severity,
+                    range: entry.range,
+                  },
+            );
+            console.log(
+              "AUDIT_ITEM",
+              JSON.stringify({
+                name,
+                severity: item.severity,
+                isDirect: item.isDirect,
+                via,
+                effects: item.effects,
+                range: item.range,
+                fixAvailable: item.fixAvailable,
+              }),
+            );
+          }
+          NODE
