@@ -17,9 +17,10 @@ Phase 2 issue: #2 CLOSED — engineering scope complete
 Phase 3 branch: phase-3/baseline-dashboard
 Phase 3 PR: #14 draft, stacked on Phase 2
 Phase 3 issue: #13 OPEN — live baseline acceptance in progress
-Phase 3 dedicated-baseline-route checkpoint: 667de2a032433a6f5a0ae6226be7ac764c6ec86c
-Phase 3 dedicated-baseline-route Quality Gate: 33798229165 — success
+Phase 3 action-origin code checkpoint: 888d5fe053da1993113f0362044f22d03e4e6cbf
+Phase 3 action-origin Quality Gate: 33802077280 — success
 Shopify Admin API: 2026-07 / ApiVersion.July26
+React Router: 7.18.3
 Requested CatalogGuard scopes: read_products only
 Shopify development store: catalogguard-dev-p8tpcpjw.myshopify.com
 CatalogGuard installation handle: catalogguard-11
@@ -76,33 +77,75 @@ This is not a merchant production default. The policy has deterministic per-shop
 - The action invokes the verified Shopify reader and `runShopifyCatalogPolicyScanV1` with `baseline=true`.
 - A deterministic baseline scan ID supports replay/idempotency evidence.
 - Shopify products remain read-only; only CatalogGuard evidence is written.
+- A dedicated `POST /app/baseline` route now owns the baseline mutation path; the Overview index route is read-only.
 
 ### Persisted Overview after baseline
 
 Overview is wired to show persisted products/variants evaluated, PASS/FAIL/UNKNOWN/NOT_APPLICABLE counts, open findings, baseline debt, regressions, blocking violations, blocking indeterminate results, waived failures, and current finding evidence summaries.
 
-## Live Phase 3 acceptance attempts — 2026-09-03
+## Live Phase 3 baseline failure investigation — 2026-09-03
 
-The pre-baseline embedded Overview was verified live and correctly showed `No baseline yet` plus the explicit development policy and action.
+The pre-baseline embedded Overview is verified live and correctly shows `No baseline yet` plus the explicit development policy and action.
 
-Two clicks of `Establish dev baseline` returned React Router `Error: Bad Request` before Shopify catalog read/scan execution. No baseline was persisted and no scan/finding evidence was modified.
+Repeated clicks of `Establish dev baseline` returned React Router `Error: Bad Request`. The critical runtime evidence is that the failing mutation did **not** produce the Shopify `authenticate.admin()` log that normal app requests produce. Therefore the 400 is emitted before CatalogGuard's route action begins. No baseline was persisted and no scan/finding evidence was modified.
 
-The first implementation used React Router `<Form>` plus a Shopify `s-button` submit control and expected a hidden `intent` field. The first fix changed that to `useSubmit({ intent })`. The second live attempt proved the request still reached the index action without the expected intent. This ruled out Shopify auth, scope, tunnel, Prisma, and the scan engine; the failure remained solely at the index-route request-body dispatch boundary.
+Two earlier dispatch changes were useful negative experiments but did not solve the failure:
 
-### Dedicated action-route fix
+1. React Router `<Form>` + hidden `intent` + Shopify `s-button`;
+2. `useSubmit({ intent })`;
+3. dedicated `POST /app/baseline` with no request body.
 
-Checkpoint `667de2a032433a6f5a0ae6226be7ac764c6ec86c` removes request-body intent dispatch entirely:
+The same pre-action 400 survived all three shapes. That rules the request body, index-route intent guard, Shopify scope, Prisma baseline logic, and scan engine out as primary causes. Do not resume button/form churn.
 
-- new action-only route: `POST /app/baseline`;
-- Overview button calls `useSubmit(null, { method: "post", action: "/app/baseline" })`;
-- no form body or intent field is required;
-- `/app/baseline` authenticates the Shopify request, resolves the CatalogGuard shop, checks for an existing baseline, creates/loads the immutable dev policy, loads exceptions, executes the verified scan, and redirects to `/app`;
-- GET `/app/baseline` redirects to `/app`;
-- the old index-route unsupported-intent action is removed.
+### Evidence-supported root cause: React Router 7.18 action-origin enforcement behind Shopify CLI proxy
 
-Permanent Quality Gate `33798229165` passed locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build.
+CatalogGuard pins React Router `7.18.3`. In this version, `singleFetchAction()` performs the framework's mutation-origin/CSRF check before route action execution. The check compares the request `Origin` against the origin represented by `request.url`, unless the origin is explicitly included in `allowedActionOrigins`.
 
-The next live action is to pull this checkpoint locally and retry once. Do not reset the dev store, relink the Shopify app, or change scopes/configuration.
+Shopify CLI development uses a public app URL/tunnel in front of the local React Router server. Runtime evidence showed both sides simultaneously:
+
+- public App Home/tunnel URL: `https://<generated>.trycloudflare.com`;
+- local React Router listener: `http://localhost:<port>`.
+
+That is the reverse-proxy topology affected by React Router's stricter 7.18 mutation-origin behavior: the browser's public origin can differ from the origin React Router derives from the proxied request. The resulting rejection is a bare 400 from `singleFetchAction()` before CatalogGuard authentication or action code runs, matching all observed failures.
+
+Live confirmation of this diagnosis is still required; it is not yet recorded as a successful baseline.
+
+### Root-cause configuration
+
+CatalogGuard now has `react-router.config.ts` that derives one allowed action host from Shopify's configured public app URL:
+
+```ts
+function configuredActionOrigins(): string[] {
+  const appUrl = process.env.SHOPIFY_APP_URL || process.env.HOST;
+
+  if (!appUrl) return [];
+
+  const parsed = new URL(appUrl);
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error("SHOPIFY_APP_URL must use http or https");
+  }
+
+  return [parsed.host];
+}
+
+export default {
+  allowedActionOrigins: configuredActionOrigins(),
+};
+```
+
+Security boundary:
+
+- no blanket CSRF disable;
+- no `*.trycloudflare.com` wildcard;
+- no hard-coded transient tunnel hostname;
+- only the exact app host Shopify supplies for the running environment is trusted;
+- production therefore remains bound to the configured production `SHOPIFY_APP_URL` rather than a development tunnel wildcard.
+
+The scaffold contract now protects that boundary and explicitly rejects wildcard `trycloudflare.com` origins.
+
+Final root-cause code head after removing the temporary exact-formatter workflow: `888d5fe053da1993113f0362044f22d03e4e6cbf`.
+
+Permanent Quality Gate `33802077280` passed locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build.
 
 ## Repository-green checkpoints
 
@@ -112,20 +155,23 @@ These are evidence points, not user approvals:
 - Phase 2 completion handoff: `c65eb5dfc8b84f6dc190679ee56d50033d13b308` / `33793827908`
 - Phase 3 first slice: `da9597471b166569e44a8ca8d35fd9dbd61791b4` / `33795979049`
 - Phase 3 synchronized handoff: `c9bbae3feb85a0a2dacc82a93cb6e5a456c45476` / `33796199258`
-- Phase 3 first submit-boundary fix: `06be5203eb21afd9712c0f53f3ec7dd44a459302` / `33797199974`
+- Phase 3 first submit-boundary experiment: `06be5203eb21afd9712c0f53f3ec7dd44a459302` / `33797199974`
 - Phase 3 dedicated baseline route: `667de2a032433a6f5a0ae6226be7ac764c6ec86c` / `33798229165`
+- Phase 3 React Router exact action-origin configuration: `888d5fe053da1993113f0362044f22d03e4e6cbf` / `33802077280`
 
 ## Phase 3 live acceptance still required
 
-1. Pull `phase-3/baseline-dashboard` locally while preserving the linked Shopify development config.
-2. Verify `No baseline yet` still renders.
-3. Click `Establish dev baseline` once.
-4. Verify the request authenticates through `/app/baseline` and one real COMPLETE baseline is persisted.
-5. Verify current failures become `BASELINE_DEBT`, not regressions.
-6. Verify product/variant/evaluation/finding counts appear on Overview.
-7. Refresh and verify the persisted state remains without silently rerunning the scan.
-8. Verify repeated baseline action cannot create a second baseline.
-9. Preserve any UNKNOWN / INDETERMINATE evidence distinctly.
+1. Pull the final Phase 3 action-origin checkpoint locally while preserving the linked Shopify development config.
+2. Restart `shopify app dev` so `react-router.config.ts` is reloaded with the new Shopify-supplied public app URL.
+3. Verify `No baseline yet` still renders.
+4. Click `Establish dev baseline` once.
+5. First diagnostic criterion: the POST must now reach CatalogGuard's action and emit Shopify `Authenticating admin request` logging. If it does not, stop and investigate config/environment visibility rather than changing the button/route again.
+6. Verify one real COMPLETE baseline is persisted.
+7. Verify current failures become `BASELINE_DEBT`, not regressions.
+8. Verify product/variant/evaluation/finding counts appear on Overview.
+9. Refresh and verify the persisted state remains without silently rerunning the scan.
+10. Verify repeated baseline action cannot create a second baseline.
+11. Preserve any UNKNOWN / INDETERMINATE evidence distinctly.
 
 After live baseline acceptance: add Findings drill-down/history, immutable merchant policy editing through new revisions, exact exception create/revoke UI, preflight persistence/UI, webhook/incremental refresh paired with reconciliation, and evaluate Shopify Bulk Operations before production large-catalog scale.
 
