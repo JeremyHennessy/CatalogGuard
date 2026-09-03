@@ -10,10 +10,7 @@ import {
   rejectUnknownKeys,
   schema,
 } from "../config";
-import {
-  emptyConfigSchema,
-  unavailableFieldResult,
-} from "./shared";
+import { emptyConfigSchema, unavailableFieldResult } from "./shared";
 
 export const barcodeRequiredRule: RuleDefinition<Record<string, never>> = {
   code: "CG-BARCODE-001",
@@ -134,7 +131,9 @@ export const barcodeUniqueRule: RuleDefinition<BarcodeUniqueConfig> = {
       ];
     }
 
-    if (!lookup.matches.some((match) => match.variantGid === target.variant!.gid)) {
+    if (
+      !lookup.matches.some((match) => match.variantGid === target.variant!.gid)
+    ) {
       return [
         resultForTarget(
           barcodeUniqueRule,
@@ -171,16 +170,10 @@ export const barcodeUniqueRule: RuleDefinition<BarcodeUniqueConfig> = {
     }
 
     return [
-      resultForTarget(
-        barcodeUniqueRule,
-        target,
-        "PASS",
-        "Barcode is unique.",
-        {
-          observed: barcode.value,
-          evidence: { normalization: config.normalization },
-        },
-      ),
+      resultForTarget(barcodeUniqueRule, target, "PASS", "Barcode is unique.", {
+        observed: barcode.value,
+        evidence: { normalization: config.normalization },
+      }),
     ];
   },
 };

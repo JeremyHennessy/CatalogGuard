@@ -7,10 +7,7 @@ import type {
   ValidatedPolicyRule,
 } from "./contracts";
 import { resultForTarget } from "./contracts";
-import {
-  evaluateProductScope,
-  parseProductScopeV1,
-} from "./scope";
+import { evaluateProductScope, parseProductScopeV1 } from "./scope";
 
 export function validatePolicyRule<TConfig>(
   definition: RuleDefinition<TConfig>,

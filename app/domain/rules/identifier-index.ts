@@ -67,7 +67,10 @@ export class InMemoryIdentifierIndex implements IdentifierLookup {
       const candidate = type === "SKU" ? variant.sku : variant.barcode;
       if (isBlankIdentifier(candidate)) continue;
 
-      if (normalizeIdentifier(candidate as string, normalization) === normalizedValue) {
+      if (
+        normalizeIdentifier(candidate as string, normalization) ===
+        normalizedValue
+      ) {
         matches.push({
           productGid: variant.productGid,
           variantGid: variant.variantGid,

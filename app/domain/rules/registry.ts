@@ -1,13 +1,7 @@
 import type { RuleDefinition } from "./contracts";
-import {
-  barcodeRequiredRule,
-  barcodeUniqueRule,
-} from "./builtin/barcode";
+import { barcodeRequiredRule, barcodeUniqueRule } from "./builtin/barcode";
 import { descriptionRequiredRule } from "./builtin/description";
-import {
-  compareAtRelationshipRule,
-  minimumPriceRule,
-} from "./builtin/pricing";
+import { compareAtRelationshipRule, minimumPriceRule } from "./builtin/pricing";
 import { skuRequiredRule, skuUniqueRule } from "./builtin/sku";
 
 export class RuleRegistry {

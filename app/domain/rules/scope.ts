@@ -3,11 +3,7 @@ import type {
   NormalizedProductV1,
   ProductStatus,
 } from "../catalog/model";
-import {
-  RuleConfigError,
-  asObject,
-  rejectUnknownKeys,
-} from "./config";
+import { RuleConfigError, asObject, rejectUnknownKeys } from "./config";
 
 export type ProductScopeV1 = {
   statuses?: readonly ProductStatus[];
@@ -32,10 +28,7 @@ function parseStringArray(
   if (value === undefined) return undefined;
 
   if (!Array.isArray(value) || value.length === 0) {
-    throw new RuleConfigError(
-      "SCOPE",
-      `${field} must be a non-empty array`,
-    );
+    throw new RuleConfigError("SCOPE", `${field} must be a non-empty array`);
   }
 
   const parsed = value.map((item) => {
@@ -68,11 +61,9 @@ export function parseProductScopeV1(input: unknown): ProductScopeV1 {
   );
 
   return {
-    statuses: parseStringArray(
-      object.statuses,
-      "statuses",
-      STATUS_VALUES,
-    ) as readonly ProductStatus[] | undefined,
+    statuses: parseStringArray(object.statuses, "statuses", STATUS_VALUES) as
+      | readonly ProductStatus[]
+      | undefined,
     vendors: parseStringArray(object.vendors, "vendors"),
     productTypes: parseStringArray(object.productTypes, "productTypes"),
     tagsAny: parseStringArray(object.tagsAny, "tagsAny"),

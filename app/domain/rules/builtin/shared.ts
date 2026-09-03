@@ -1,8 +1,5 @@
 import type { FieldEvidence } from "../../catalog/model";
-import type {
-  RuleDefinition,
-  RuleResult,
-} from "../contracts";
+import type { RuleDefinition, RuleResult } from "../contracts";
 import { resultForTarget } from "../contracts";
 import { schema, asObject, rejectUnknownKeys } from "../config";
 

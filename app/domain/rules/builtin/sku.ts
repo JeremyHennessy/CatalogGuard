@@ -10,10 +10,7 @@ import {
   rejectUnknownKeys,
   schema,
 } from "../config";
-import {
-  emptyConfigSchema,
-  unavailableFieldResult,
-} from "./shared";
+import { emptyConfigSchema, unavailableFieldResult } from "./shared";
 
 export const skuRequiredRule: RuleDefinition<Record<string, never>> = {
   code: "CG-SKU-001",
@@ -37,28 +34,18 @@ export const skuRequiredRule: RuleDefinition<Record<string, never>> = {
 
     if (isBlankIdentifier(sku.value)) {
       return [
-        resultForTarget(
-          skuRequiredRule,
-          target,
-          "FAIL",
-          "SKU is required.",
-          {
-            reasonCode: "SKU_MISSING",
-            observed: sku.value,
-            expected: "non-empty SKU",
-          },
-        ),
+        resultForTarget(skuRequiredRule, target, "FAIL", "SKU is required.", {
+          reasonCode: "SKU_MISSING",
+          observed: sku.value,
+          expected: "non-empty SKU",
+        }),
       ];
     }
 
     return [
-      resultForTarget(
-        skuRequiredRule,
-        target,
-        "PASS",
-        "SKU is present.",
-        { observed: sku.value },
-      ),
+      resultForTarget(skuRequiredRule, target, "PASS", "SKU is present.", {
+        observed: sku.value,
+      }),
     ];
   },
 };
@@ -134,7 +121,9 @@ export const skuUniqueRule: RuleDefinition<SkuUniqueConfig> = {
       ];
     }
 
-    if (!lookup.matches.some((match) => match.variantGid === target.variant!.gid)) {
+    if (
+      !lookup.matches.some((match) => match.variantGid === target.variant!.gid)
+    ) {
       return [
         resultForTarget(
           skuUniqueRule,
@@ -171,16 +160,10 @@ export const skuUniqueRule: RuleDefinition<SkuUniqueConfig> = {
     }
 
     return [
-      resultForTarget(
-        skuUniqueRule,
-        target,
-        "PASS",
-        "SKU is unique.",
-        {
-          observed: sku.value,
-          evidence: { normalization: config.normalization },
-        },
-      ),
+      resultForTarget(skuUniqueRule, target, "PASS", "SKU is unique.", {
+        observed: sku.value,
+        evidence: { normalization: config.normalization },
+      }),
     ];
   },
 };

@@ -5,9 +5,7 @@ import {
   type NormalizedProductV1,
   type NormalizedVariantV1,
 } from "../../app/domain/catalog/model";
-import {
-  InMemoryIdentifierIndex,
-} from "../../app/domain/rules/identifier-index";
+import { InMemoryIdentifierIndex } from "../../app/domain/rules/identifier-index";
 import type { EvaluationContextV1 } from "../../app/domain/rules/contracts";
 
 export function makeVariant(
@@ -61,7 +59,9 @@ export function makeContext(
       productGid: variant.productGid,
       variantGid: variant.gid,
       sku:
-        variant.sku.availability === "AVAILABLE" ? variant.sku.value : undefined,
+        variant.sku.availability === "AVAILABLE"
+          ? variant.sku.value
+          : undefined,
       barcode:
         variant.barcode.availability === "AVAILABLE"
           ? variant.barcode.value

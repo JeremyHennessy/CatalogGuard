@@ -1,8 +1,6 @@
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  InMemoryIdentifierIndex,
-} from "../../app/domain/rules/identifier-index";
+import { InMemoryIdentifierIndex } from "../../app/domain/rules/identifier-index";
 
 test("identifier index detects duplicate creation and removal by update", () => {
   const index = new InMemoryIdentifierIndex();

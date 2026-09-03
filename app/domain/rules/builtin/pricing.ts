@@ -8,10 +8,7 @@ import {
   schema,
 } from "../config";
 import { compareDecimalStrings } from "../decimal";
-import {
-  emptyConfigSchema,
-  unavailableFieldResult,
-} from "./shared";
+import { emptyConfigSchema, unavailableFieldResult } from "./shared";
 
 type MinimumPriceConfig = {
   minimum: string;

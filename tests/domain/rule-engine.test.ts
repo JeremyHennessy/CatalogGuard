@@ -1,9 +1,6 @@
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  available,
-  unavailable,
-} from "../../app/domain/catalog/model";
+import { available, unavailable } from "../../app/domain/catalog/model";
 import {
   evaluateRule,
   validatePolicyRule,
@@ -13,9 +10,7 @@ import type {
   RuleDefinition,
   RuleStatus,
 } from "../../app/domain/rules/contracts";
-import {
-  RuleConfigError,
-} from "../../app/domain/rules/config";
+import { RuleConfigError } from "../../app/domain/rules/config";
 import {
   createBuiltinRuleRegistry,
   RuleRegistry,
@@ -32,14 +27,8 @@ import {
   compareAtRelationshipRule,
   minimumPriceRule,
 } from "../../app/domain/rules/builtin/pricing";
-import {
-  descriptionRequiredRule,
-} from "../../app/domain/rules/builtin/description";
-import {
-  makeContext,
-  makeProduct,
-  makeVariant,
-} from "./fixtures";
+import { descriptionRequiredRule } from "../../app/domain/rules/builtin/description";
+import { makeContext, makeProduct, makeVariant } from "./fixtures";
 
 function policyInput(
   definition: RuleDefinition<unknown>,
@@ -72,10 +61,7 @@ function evaluate<TConfig>(
   return evaluateRule(definition, target, validated, context)[0];
 }
 
-function targetFor(
-  product = makeProduct(),
-  variant = product.variants[0],
-) {
+function targetFor(product = makeProduct(), variant = product.variants[0]) {
   return { product, variant };
 }
 
@@ -94,20 +80,18 @@ test("builtin registry contains stable unique rule identities", () => {
   ]);
 
   assert.throws(
-    () => new RuleRegistry().register(skuRequiredRule).register(skuRequiredRule),
+    () =>
+      new RuleRegistry().register(skuRequiredRule).register(skuRequiredRule),
     /duplicate rule definition/,
   );
 });
 
 test("severity and blocking remain policy metadata, not rule status", () => {
-  const validated = validatePolicyRule(
-    skuRequiredRule,
-    {
-      ...policyInput(skuRequiredRule),
-      severity: "WARNING",
-      blocking: true,
-    },
-  );
+  const validated = validatePolicyRule(skuRequiredRule, {
+    ...policyInput(skuRequiredRule),
+    severity: "WARNING",
+    blocking: true,
+  });
 
   assert.equal(validated.severity, "WARNING");
   assert.equal(validated.blocking, true);
@@ -116,32 +100,33 @@ test("severity and blocking remain policy metadata, not rule status", () => {
 test("SKU required returns PASS, FAIL, UNKNOWN, and scoped NOT_APPLICABLE", () => {
   const passing = makeVariant({ sku: available("SKU-001") });
   assert.equal(
-    evaluate(skuRequiredRule, targetFor(makeProduct({ variants: [passing] }), passing))
-      .status,
+    evaluate(
+      skuRequiredRule,
+      targetFor(makeProduct({ variants: [passing] }), passing),
+    ).status,
     "PASS",
   );
 
   const failing = makeVariant({ sku: available("   ") });
   assert.equal(
-    evaluate(skuRequiredRule, targetFor(makeProduct({ variants: [failing] }), failing))
-      .status,
+    evaluate(
+      skuRequiredRule,
+      targetFor(makeProduct({ variants: [failing] }), failing),
+    ).status,
     "FAIL",
   );
 
   const unknown = makeVariant({ sku: unavailable("sku field missing") });
   assert.equal(
-    evaluate(skuRequiredRule, targetFor(makeProduct({ variants: [unknown] }), unknown))
-      .status,
+    evaluate(
+      skuRequiredRule,
+      targetFor(makeProduct({ variants: [unknown] }), unknown),
+    ).status,
     "UNKNOWN",
   );
 
   assert.equal(
-    evaluate(
-      skuRequiredRule,
-      targetFor(),
-      {},
-      { statuses: ["DRAFT"] },
-    ).status,
+    evaluate(skuRequiredRule, targetFor(), {}, { statuses: ["DRAFT"] }).status,
     "NOT_APPLICABLE",
   );
 });
@@ -177,8 +162,10 @@ test("SKU uniqueness uses explicit store-wide index semantics", () => {
 
   const empty = makeVariant({ sku: available(null) });
   assert.equal(
-    evaluate(skuUniqueRule, targetFor(makeProduct({ variants: [empty] }), empty))
-      .status,
+    evaluate(
+      skuUniqueRule,
+      targetFor(makeProduct({ variants: [empty] }), empty),
+    ).status,
     "NOT_APPLICABLE",
   );
 

@@ -1,9 +1,6 @@
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  available,
-  unavailable,
-} from "../../app/domain/catalog/model";
+import { available, unavailable } from "../../app/domain/catalog/model";
 import {
   evaluateProductScope,
   parseProductScopeV1,

@@ -22,11 +22,7 @@ export function asObject(
 ): Record<string, unknown> {
   if (input === undefined) return {};
 
-  if (
-    input === null ||
-    typeof input !== "object" ||
-    Array.isArray(input)
-  ) {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
     throw new RuleConfigError(ruleCode, "configuration must be an object");
   }
 

@@ -67,7 +67,12 @@ export function resultForTarget(
   message: string,
   details: Omit<
     Partial<RuleResult>,
-    "status" | "ruleCode" | "ruleVersion" | "resourceGid" | "subresourceGid" | "message"
+    | "status"
+    | "ruleCode"
+    | "ruleVersion"
+    | "resourceGid"
+    | "subresourceGid"
+    | "message"
   > = {},
 ): RuleResult {
   return {
