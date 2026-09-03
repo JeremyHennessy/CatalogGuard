@@ -1,8 +1,5 @@
 import type { ValidatedPolicyRevisionV1 } from "./contracts";
-import {
-  POLICY_SCHEMA_VERSION,
-  type PolicyRevisionInputV1,
-} from "./contracts";
+import { POLICY_SCHEMA_VERSION, type PolicyRevisionInputV1 } from "./contracts";
 
 export const DEV_VALIDATION_POLICY_NAME = "CatalogGuard Dev validation";
 export const DEV_VALIDATION_POLICY_DESCRIPTION =
@@ -90,7 +87,9 @@ export function assertDevValidationPolicyRevisionV1(
   revision: ValidatedPolicyRevisionV1,
 ) {
   if (revision.revisionNumber !== 1 || revision.rules.length !== 2) {
-    throw new Error("dev validation policy must contain exactly revision 1 with two rules");
+    throw new Error(
+      "dev validation policy must contain exactly revision 1 with two rules",
+    );
   }
 
   const required = revision.rules.find(
@@ -101,7 +100,9 @@ export function assertDevValidationPolicyRevisionV1(
   );
 
   if (!required || !unique) {
-    throw new Error("dev validation policy must contain SKU required and SKU unique");
+    throw new Error(
+      "dev validation policy must contain SKU required and SKU unique",
+    );
   }
 
   for (const entry of [required, unique]) {
@@ -119,6 +120,8 @@ export function assertDevValidationPolicyRevisionV1(
 
   const uniqueConfig = unique.rule.config as { normalization?: unknown };
   if (uniqueConfig.normalization !== "EXACT") {
-    throw new Error("dev validation SKU uniqueness must use EXACT normalization");
+    throw new Error(
+      "dev validation SKU uniqueness must use EXACT normalization",
+    );
   }
 }

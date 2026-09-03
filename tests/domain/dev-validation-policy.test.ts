@@ -59,9 +59,7 @@ test("dev validation assertion rejects drift in merchant semantics", () => {
   const drifted = {
     ...input,
     rules: input.rules.map((rule) =>
-      rule.ruleCode === "CG-SKU-001"
-        ? { ...rule, blocking: false }
-        : rule,
+      rule.ruleCode === "CG-SKU-001" ? { ...rule, blocking: false } : rule,
     ),
   };
   const revision = validatePolicyRevisionV1(registry, drifted);

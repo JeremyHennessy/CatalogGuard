@@ -149,20 +149,27 @@ export default function CatalogGuardOverview() {
               <s-list-item>
                 Blocking indeterminate: {overview.counts.blockingIndeterminate}
               </s-list-item>
-              <s-list-item>Waived failures: {overview.counts.waived}</s-list-item>
+              <s-list-item>
+                Waived failures: {overview.counts.waived}
+              </s-list-item>
             </s-unordered-list>
           </s-section>
 
           <s-section heading={`Open findings (${overview.counts.open})`}>
             {overview.findings.length === 0 ? (
-              <s-paragraph>No open findings are currently persisted.</s-paragraph>
+              <s-paragraph>
+                No open findings are currently persisted.
+              </s-paragraph>
             ) : (
               <s-unordered-list>
                 {overview.findings.map((finding) => (
                   <s-list-item key={finding.id}>
-                    {finding.ruleCode} — {finding.classification} — {finding.severity}
-                    {finding.blocking ? " / blocking" : " / non-blocking"} —{" "}
-                    {finding.enforcement} — {finding.message} — resource{" "}
+                    {finding.ruleCode} — {finding.classification} —{" "}
+                    {finding.severity}
+                    {finding.blocking
+                      ? " / blocking"
+                      : " / non-blocking"} — {finding.enforcement} —{" "}
+                    {finding.message} — resource{" "}
                     {finding.subresourceGid ?? finding.resourceGid}
                   </s-list-item>
                 ))}
@@ -197,9 +204,9 @@ export default function CatalogGuardOverview() {
 
       <s-section heading="Development policy boundary">
         <s-paragraph>
-          CatalogGuard remains read-only to Shopify products. The baseline action
-          reads the complete catalog, evaluates the immutable development policy,
-          and writes only CatalogGuard's own evidence database.
+          CatalogGuard remains read-only to Shopify products. The baseline
+          action reads the complete catalog, evaluates the immutable development
+          policy, and writes only CatalogGuard's own evidence database.
         </s-paragraph>
       </s-section>
     </s-page>

@@ -20,9 +20,7 @@ export async function loadExactRuleExceptionsForEvaluationV1(
         coverageType: "FINDING_EXACT" as const,
         ruleCode: row.ruleCode,
         resourceGid: row.resourceGid,
-        ...(row.subresourceGid
-          ? { subresourceGid: row.subresourceGid }
-          : {}),
+        ...(row.subresourceGid ? { subresourceGid: row.subresourceGid } : {}),
         reason: row.reason,
         createdAt: row.createdAt.toISOString(),
         ...(row.expiresAt ? { expiresAt: row.expiresAt.toISOString() } : {}),
