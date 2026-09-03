@@ -1,4 +1,4 @@
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import type { ActionFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import { developmentBaselineScanIdV1 } from "../domain/policy/dev-validation-template";
 import { authenticate } from "../shopify.server";
@@ -11,7 +11,7 @@ import { ensureCatalogGuardShopV1 } from "../services/shops/shop-record.server";
 const API_VERSION = "2026-07";
 const ENGINE_VERSION = "catalogguard-policy-v1";
 
-export const loader = async (_args: LoaderFunctionArgs) => redirect("/app");
+export const loader = async () => redirect("/app");
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
