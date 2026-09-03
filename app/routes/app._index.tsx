@@ -206,7 +206,7 @@ export default function CatalogGuardOverview() {
         <s-paragraph>
           CatalogGuard remains read-only to Shopify products. The baseline
           action reads the complete catalog, evaluates the immutable development
-          policy, and writes only CatalogGuard's own evidence database.
+          policy, and writes only CatalogGuard&apos;s own evidence database.
         </s-paragraph>
       </s-section>
     </s-page>
