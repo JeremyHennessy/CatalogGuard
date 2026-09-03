@@ -354,10 +354,7 @@ test("description rule evaluates normalized plain text length", () => {
 });
 
 test("vendor rule requires a value and optionally enforces exact allowed values", () => {
-  assert.equal(
-    evaluate(vendorRequiredRule, targetFor()).status,
-    "PASS",
-  );
+  assert.equal(evaluate(vendorRequiredRule, targetFor()).status, "PASS");
 
   assert.equal(
     evaluate(
@@ -376,20 +373,16 @@ test("vendor rule requires a value and optionally enforces exact allowed values"
   );
 
   assert.equal(
-    evaluate(
-      vendorRequiredRule,
-      targetFor(),
-      { allowedValues: ["Approved Vendor"] },
-    ).status,
+    evaluate(vendorRequiredRule, targetFor(), {
+      allowedValues: ["Approved Vendor"],
+    }).status,
     "FAIL",
   );
 
   assert.equal(
-    evaluate(
-      vendorRequiredRule,
-      targetFor(),
-      { allowedValues: ["Example Vendor"] },
-    ).status,
+    evaluate(vendorRequiredRule, targetFor(), {
+      allowedValues: ["Example Vendor"],
+    }).status,
     "PASS",
   );
 
@@ -404,10 +397,7 @@ test("vendor rule requires a value and optionally enforces exact allowed values"
 });
 
 test("product type rule requires a value and optionally enforces allowed values", () => {
-  assert.equal(
-    evaluate(productTypeRequiredRule, targetFor()).status,
-    "PASS",
-  );
+  assert.equal(evaluate(productTypeRequiredRule, targetFor()).status, "PASS");
 
   assert.equal(
     evaluate(
@@ -426,20 +416,16 @@ test("product type rule requires a value and optionally enforces allowed values"
   );
 
   assert.equal(
-    evaluate(
-      productTypeRequiredRule,
-      targetFor(),
-      { allowedValues: ["Example Type"] },
-    ).status,
+    evaluate(productTypeRequiredRule, targetFor(), {
+      allowedValues: ["Example Type"],
+    }).status,
     "PASS",
   );
 
   assert.equal(
-    evaluate(
-      productTypeRequiredRule,
-      targetFor(),
-      { allowedValues: ["Other Type"] },
-    ).status,
+    evaluate(productTypeRequiredRule, targetFor(), {
+      allowedValues: ["Other Type"],
+    }).status,
     "FAIL",
   );
 });

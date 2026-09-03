@@ -20,7 +20,10 @@ function requiredAllowedTextSchema(ruleCode: string) {
 
     if (object.allowedValues === undefined) return {};
 
-    if (!Array.isArray(object.allowedValues) || object.allowedValues.length === 0) {
+    if (
+      !Array.isArray(object.allowedValues) ||
+      object.allowedValues.length === 0
+    ) {
       throw new RuleConfigError(
         ruleCode,
         "allowedValues must be a non-empty array when provided",
@@ -116,21 +119,22 @@ export const vendorRequiredRule: RuleDefinition<RequiredAllowedTextConfig> = {
   },
 };
 
-export const productTypeRequiredRule: RuleDefinition<RequiredAllowedTextConfig> = {
-  code: "CG-TYPE-001",
-  version: 1,
-  family: "COMPLETENESS",
-  target: "PRODUCT",
-  configSchema: requiredAllowedTextSchema("CG-TYPE-001"),
-  evaluate(target, config) {
-    return evaluateRequiredAllowedText(
-      productTypeRequiredRule,
-      target,
-      "productType",
-      "Product type",
-      target.product.productType,
-      config,
-      "PRODUCT_TYPE",
-    );
-  },
-};
+export const productTypeRequiredRule: RuleDefinition<RequiredAllowedTextConfig> =
+  {
+    code: "CG-TYPE-001",
+    version: 1,
+    family: "COMPLETENESS",
+    target: "PRODUCT",
+    configSchema: requiredAllowedTextSchema("CG-TYPE-001"),
+    evaluate(target, config) {
+      return evaluateRequiredAllowedText(
+        productTypeRequiredRule,
+        target,
+        "productType",
+        "Product type",
+        target.product.productType,
+        config,
+        "PRODUCT_TYPE",
+      );
+    },
+  };
