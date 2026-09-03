@@ -1,5 +1,8 @@
-import type { ValidatedPolicyRevisionV1 } from "./contracts";
-import { POLICY_SCHEMA_VERSION, type PolicyRevisionInputV1 } from "./contracts";
+import {
+  POLICY_SCHEMA_VERSION,
+  type PolicyRevisionInputV1,
+  type ValidatedPolicyRevisionV1,
+} from "./contracts";
 
 export const DEV_VALIDATION_POLICY_NAME = "CatalogGuard Dev validation";
 export const DEV_VALIDATION_POLICY_DESCRIPTION =
