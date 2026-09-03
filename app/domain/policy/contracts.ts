@@ -1,4 +1,8 @@
-import type { PolicyRuleInput, RuleDefinition, ValidatedPolicyRule } from "../rules/contracts";
+import type {
+  PolicyRuleInput,
+  RuleDefinition,
+  ValidatedPolicyRule,
+} from "../rules/contracts";
 import { validatePolicyRule } from "../rules/engine";
 import type { RuleRegistry } from "../rules/registry";
 
@@ -52,7 +56,9 @@ export function validatePolicyRevisionV1(
   input: PolicyRevisionInputV1,
 ): ValidatedPolicyRevisionV1 {
   if (input.schemaVersion !== POLICY_SCHEMA_VERSION) {
-    throw new Error(`unsupported policy schema version: ${input.schemaVersion}`);
+    throw new Error(
+      `unsupported policy schema version: ${input.schemaVersion}`,
+    );
   }
 
   requireNonEmpty(input.id, "policy revision id");
@@ -72,8 +78,13 @@ export function validatePolicyRevisionV1(
     }
 
     seenRules.add(key);
-    const definition = registry.get(policyRule.ruleCode, policyRule.ruleVersion);
-    const rule = freezeValidatedRule(validatePolicyRule(definition, policyRule));
+    const definition = registry.get(
+      policyRule.ruleCode,
+      policyRule.ruleVersion,
+    );
+    const rule = freezeValidatedRule(
+      validatePolicyRule(definition, policyRule),
+    );
 
     return Object.freeze({ definition, rule });
   });

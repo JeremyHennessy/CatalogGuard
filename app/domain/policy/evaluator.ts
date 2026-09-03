@@ -161,7 +161,9 @@ export function evaluatePolicyRevisionV1(input: {
     policyRevisionId: input.revision.id,
   };
   const exceptions = input.exceptions ?? [];
-  const products = [...input.products].sort((a, b) => a.gid.localeCompare(b.gid));
+  const products = [...input.products].sort((a, b) =>
+    a.gid.localeCompare(b.gid),
+  );
   const evaluations: PolicyEvaluationV1[] = [];
 
   for (const entry of input.revision.rules) {

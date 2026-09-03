@@ -101,9 +101,7 @@ export function transitionFindingV1(input: {
     shopId: input.shopId,
     ruleCode: result.ruleCode,
     resourceGid: result.resourceGid,
-    ...(result.subresourceGid
-      ? { subresourceGid: result.subresourceGid }
-      : {}),
+    ...(result.subresourceGid ? { subresourceGid: result.subresourceGid } : {}),
   });
   const previous = input.previous;
 
@@ -130,7 +128,9 @@ export function transitionFindingV1(input: {
 
       return Object.freeze({
         finding,
-        events: Object.freeze([eventFor(findingKey, "CREATED", input.evaluation)]),
+        events: Object.freeze([
+          eventFor(findingKey, "CREATED", input.evaluation),
+        ]),
       });
     }
 
@@ -146,7 +146,9 @@ export function transitionFindingV1(input: {
 
       return Object.freeze({
         finding,
-        events: Object.freeze([eventFor(findingKey, "REOPENED", input.evaluation)]),
+        events: Object.freeze([
+          eventFor(findingKey, "REOPENED", input.evaluation),
+        ]),
       });
     }
 
@@ -168,7 +170,9 @@ export function transitionFindingV1(input: {
 
     return Object.freeze({
       finding,
-      events: Object.freeze([eventFor(findingKey, "RESOLVED", input.evaluation)]),
+      events: Object.freeze([
+        eventFor(findingKey, "RESOLVED", input.evaluation),
+      ]),
     });
   }
 
