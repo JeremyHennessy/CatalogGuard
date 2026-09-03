@@ -1,6 +1,11 @@
 import type { RuleDefinition } from "./contracts";
 import { barcodeRequiredRule, barcodeUniqueRule } from "./builtin/barcode";
 import { descriptionRequiredRule } from "./builtin/description";
+import { minimumMediaRule } from "./builtin/media";
+import {
+  productTypeRequiredRule,
+  vendorRequiredRule,
+} from "./builtin/product-attributes";
 import { compareAtRelationshipRule, minimumPriceRule } from "./builtin/pricing";
 import { skuRequiredRule, skuUniqueRule } from "./builtin/sku";
 
@@ -47,5 +52,8 @@ export function createBuiltinRuleRegistry(): RuleRegistry {
     .register(barcodeUniqueRule)
     .register(minimumPriceRule)
     .register(compareAtRelationshipRule)
-    .register(descriptionRequiredRule);
+    .register(descriptionRequiredRule)
+    .register(vendorRequiredRule)
+    .register(productTypeRequiredRule)
+    .register(minimumMediaRule);
 }

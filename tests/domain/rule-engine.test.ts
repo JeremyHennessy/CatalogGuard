@@ -28,6 +28,11 @@ import {
   minimumPriceRule,
 } from "../../app/domain/rules/builtin/pricing";
 import { descriptionRequiredRule } from "../../app/domain/rules/builtin/description";
+import {
+  productTypeRequiredRule,
+  vendorRequiredRule,
+} from "../../app/domain/rules/builtin/product-attributes";
+import { minimumMediaRule } from "../../app/domain/rules/builtin/media";
 import { makeContext, makeProduct, makeVariant } from "./fixtures";
 
 function policyInput(
@@ -73,10 +78,13 @@ test("builtin registry contains stable unique rule identities", () => {
     "CG-BARCODE-001@1",
     "CG-BARCODE-002@1",
     "CG-DESC-001@1",
+    "CG-MEDIA-001@1",
     "CG-PRICE-001@1",
     "CG-PRICE-002@1",
     "CG-SKU-001@1",
     "CG-SKU-002@1",
+    "CG-TYPE-001@1",
+    "CG-VENDOR-001@1",
   ]);
 
   assert.throws(
@@ -345,6 +353,144 @@ test("description rule evaluates normalized plain text length", () => {
   );
 });
 
+test("vendor rule requires a value and optionally enforces exact allowed values", () => {
+  assert.equal(
+    evaluate(vendorRequiredRule, targetFor()).status,
+    "PASS",
+  );
+
+  assert.equal(
+    evaluate(
+      vendorRequiredRule,
+      targetFor(makeProduct({ vendor: available("   ") })),
+    ).status,
+    "FAIL",
+  );
+
+  assert.equal(
+    evaluate(
+      vendorRequiredRule,
+      targetFor(makeProduct({ vendor: unavailable("vendor not fetched") })),
+    ).status,
+    "UNKNOWN",
+  );
+
+  assert.equal(
+    evaluate(
+      vendorRequiredRule,
+      targetFor(),
+      { allowedValues: ["Approved Vendor"] },
+    ).status,
+    "FAIL",
+  );
+
+  assert.equal(
+    evaluate(
+      vendorRequiredRule,
+      targetFor(),
+      { allowedValues: ["Example Vendor"] },
+    ).status,
+    "PASS",
+  );
+
+  assert.throws(
+    () =>
+      validatePolicyRule(
+        vendorRequiredRule,
+        policyInput(vendorRequiredRule, { allowedValues: [] }),
+      ),
+    RuleConfigError,
+  );
+});
+
+test("product type rule requires a value and optionally enforces allowed values", () => {
+  assert.equal(
+    evaluate(productTypeRequiredRule, targetFor()).status,
+    "PASS",
+  );
+
+  assert.equal(
+    evaluate(
+      productTypeRequiredRule,
+      targetFor(makeProduct({ productType: available("") })),
+    ).status,
+    "FAIL",
+  );
+
+  assert.equal(
+    evaluate(
+      productTypeRequiredRule,
+      targetFor(makeProduct({ productType: unavailable("not requested") })),
+    ).status,
+    "UNKNOWN",
+  );
+
+  assert.equal(
+    evaluate(
+      productTypeRequiredRule,
+      targetFor(),
+      { allowedValues: ["Example Type"] },
+    ).status,
+    "PASS",
+  );
+
+  assert.equal(
+    evaluate(
+      productTypeRequiredRule,
+      targetFor(),
+      { allowedValues: ["Other Type"] },
+    ).status,
+    "FAIL",
+  );
+});
+
+test("media minimum handles boundary, missing evidence, and invalid source counts", () => {
+  assert.equal(
+    evaluate(
+      minimumMediaRule,
+      targetFor(makeProduct({ mediaCount: available(2) })),
+      { minimum: 2 },
+    ).status,
+    "PASS",
+  );
+
+  assert.equal(
+    evaluate(
+      minimumMediaRule,
+      targetFor(makeProduct({ mediaCount: available(1) })),
+      { minimum: 2 },
+    ).status,
+    "FAIL",
+  );
+
+  assert.equal(
+    evaluate(
+      minimumMediaRule,
+      targetFor(makeProduct({ mediaCount: unavailable("media not fetched") })),
+      { minimum: 1 },
+    ).status,
+    "UNKNOWN",
+  );
+
+  assert.equal(
+    evaluate(
+      minimumMediaRule,
+      targetFor(makeProduct({ mediaCount: available(-1) })),
+      { minimum: 1 },
+    ).status,
+    "UNKNOWN",
+  );
+
+  assert.throws(
+    () =>
+      validatePolicyRule(
+        minimumMediaRule,
+        policyInput(minimumMediaRule, { minimum: 0 }),
+      ),
+    RuleConfigError,
+  );
+});
+
 test("scope uncertainty maps to UNKNOWN before rule condition", () => {
   const product = makeProduct({ vendor: unavailable("vendor unavailable") });
   const result = evaluate(
@@ -404,7 +550,7 @@ test("rule exceptions degrade to UNKNOWN instead of creating false failures", ()
   assert.deepEqual(result.evidence, { errorName: "TypeError" });
 });
 
-test("every first-slice rule returns scoped NOT_APPLICABLE", () => {
+test("every initial catalog rule returns scoped NOT_APPLICABLE", () => {
   const rules: readonly [RuleDefinition<unknown>, unknown][] = [
     [skuRequiredRule, {}],
     [skuUniqueRule as RuleDefinition<unknown>, {}],
@@ -413,6 +559,9 @@ test("every first-slice rule returns scoped NOT_APPLICABLE", () => {
     [minimumPriceRule as RuleDefinition<unknown>, { minimum: "1.00" }],
     [compareAtRelationshipRule, {}],
     [descriptionRequiredRule as RuleDefinition<unknown>, { minLength: 1 }],
+    [vendorRequiredRule as RuleDefinition<unknown>, {}],
+    [productTypeRequiredRule as RuleDefinition<unknown>, {}],
+    [minimumMediaRule as RuleDefinition<unknown>, { minimum: 1 }],
   ];
 
   const statuses: RuleStatus[] = rules.map(([rule, config]) => {
