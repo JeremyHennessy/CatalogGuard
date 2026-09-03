@@ -1,13 +1,17 @@
 import type { RuleDefinition } from "./contracts";
 import { barcodeRequiredRule, barcodeUniqueRule } from "./builtin/barcode";
+import { categoryRequiredRule } from "./builtin/category";
 import { descriptionRequiredRule } from "./builtin/description";
 import { minimumMediaRule } from "./builtin/media";
+import { requiredOptionNamesRule } from "./builtin/options";
 import {
   productTypeRequiredRule,
   vendorRequiredRule,
 } from "./builtin/product-attributes";
 import { compareAtRelationshipRule, minimumPriceRule } from "./builtin/pricing";
+import { seoDescriptionRequiredRule, seoTitleRequiredRule } from "./builtin/seo";
 import { skuRequiredRule, skuUniqueRule } from "./builtin/sku";
+import { requiredTagsRule } from "./builtin/tags";
 
 export class RuleRegistry {
   private readonly definitions = new Map<string, RuleDefinition<unknown>>();
@@ -55,5 +59,10 @@ export function createBuiltinRuleRegistry(): RuleRegistry {
     .register(descriptionRequiredRule)
     .register(vendorRequiredRule)
     .register(productTypeRequiredRule)
-    .register(minimumMediaRule);
+    .register(minimumMediaRule)
+    .register(seoTitleRequiredRule)
+    .register(seoDescriptionRequiredRule)
+    .register(categoryRequiredRule)
+    .register(requiredTagsRule)
+    .register(requiredOptionNamesRule);
 }
