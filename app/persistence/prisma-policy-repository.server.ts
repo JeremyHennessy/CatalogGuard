@@ -94,7 +94,9 @@ export class PrismaPolicyRepository implements PolicyRepository {
 
   async appendRevision(input: AppendPolicyRevisionInput): Promise<void> {
     if (input.revision.policyId !== input.policyId) {
-      throw new Error("policy revision does not belong to the requested policy");
+      throw new Error(
+        "policy revision does not belong to the requested policy",
+      );
     }
 
     await this.client.$transaction(async (tx) => {

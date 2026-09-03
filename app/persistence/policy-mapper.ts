@@ -73,7 +73,8 @@ export function policyRevisionInputFromSnapshotV1(
     .map(ruleInputFromSnapshot);
 
   return {
-    schemaVersion: snapshot.schemaVersion as PolicyRevisionInputV1["schemaVersion"],
+    schemaVersion:
+      snapshot.schemaVersion as PolicyRevisionInputV1["schemaVersion"],
     id: snapshot.id,
     policyId: snapshot.policyId,
     revisionNumber: snapshot.revisionNumber,

@@ -55,11 +55,17 @@ test("policy snapshots round-trip normalized rule config, scope, identity, and o
         severity: "ERROR",
         blocking: true,
         config: { minimum: "5.00" },
-        scope: { productTypes: ["snowboard"], vendors: ["Vendor B", "Vendor A"] },
+        scope: {
+          productTypes: ["snowboard"],
+          vendors: ["Vendor B", "Vendor A"],
+        },
       },
     ],
   };
-  const validated = validatePolicyRevisionV1(createBuiltinRuleRegistry(), input);
+  const validated = validatePolicyRevisionV1(
+    createBuiltinRuleRegistry(),
+    input,
+  );
   const snapshot = snapshotValidatedPolicyRevisionV1(validated);
 
   assert.equal(snapshot.id, input.id);

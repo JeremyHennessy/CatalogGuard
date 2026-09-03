@@ -18,7 +18,9 @@ function canonicalize(
 
   if (value === undefined) {
     if (inArray || path === "$") {
-      throw new TypeError(`${path} contains undefined, which is not valid JSON`);
+      throw new TypeError(
+        `${path} contains undefined, which is not valid JSON`,
+      );
     }
 
     return OMIT;
@@ -57,12 +59,7 @@ function canonicalize(
   try {
     if (Array.isArray(value)) {
       return value.map((item, index) => {
-        const normalized = canonicalize(
-          item,
-          `${path}[${index}]`,
-          seen,
-          true,
-        );
+        const normalized = canonicalize(item, `${path}[${index}]`, seen, true);
 
         if (normalized === OMIT) {
           throw new TypeError(`${path}[${index}] contains undefined`);
