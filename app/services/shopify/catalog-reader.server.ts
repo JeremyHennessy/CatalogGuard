@@ -1,10 +1,7 @@
 import { readVerifiedShopifyCatalogV1 } from "../../domain/catalog/shopify-reader";
 
 export type ShopifyAdminGraphqlClient = Readonly<{
-  graphql(
-    query: string,
-    options: { variables: object },
-  ): Promise<Response>;
+  graphql(query: string, options: { variables: object }): Promise<Response>;
 }>;
 
 export async function readVerifiedCatalogFromShopifyAdmin(

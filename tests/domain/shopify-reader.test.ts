@@ -70,7 +70,12 @@ test("verified Shopify reader consumes both global connections to completion", a
     if (products) {
       return variables.after === null
         ? envelope("products", [product("gid://shopify/Product/2")], true, "p1")
-        : envelope("products", [product("gid://shopify/Product/1")], false, "p2");
+        : envelope(
+            "products",
+            [product("gid://shopify/Product/1")],
+            false,
+            "p2",
+          );
     }
 
     return variables.after === null
@@ -134,7 +139,12 @@ test("Shopify reader rejects a repeated pagination cursor", async () => {
       readVerifiedShopifyCatalogV1({
         execute: async (query) => {
           if (query.includes("CatalogGuardProducts")) {
-            return envelope("products", [product("gid://shopify/Product/1")], true, "same");
+            return envelope(
+              "products",
+              [product("gid://shopify/Product/1")],
+              true,
+              "same",
+            );
           }
           return envelope("productVariants", [], false, null);
         },

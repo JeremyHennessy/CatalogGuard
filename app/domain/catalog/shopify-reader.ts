@@ -1,4 +1,7 @@
-import { normalizeShopifyCatalogV1, type NormalizedShopifyCatalogV1 } from "./shopify-normalizer";
+import {
+  normalizeShopifyCatalogV1,
+  type NormalizedShopifyCatalogV1,
+} from "./shopify-normalizer";
 import {
   SHOPIFY_PRODUCTS_QUERY_V1,
   SHOPIFY_VARIANTS_QUERY_V1,
@@ -61,10 +64,14 @@ function parseConnectionPage<T>(
 
   const connection = payload.data[connectionName];
   if (!isObject(connection) || !Array.isArray(connection.nodes)) {
-    throw new Error(`Shopify GraphQL response is missing ${connectionName} nodes`);
+    throw new Error(
+      `Shopify GraphQL response is missing ${connectionName} nodes`,
+    );
   }
   if (!isObject(connection.pageInfo)) {
-    throw new Error(`Shopify GraphQL response is missing ${connectionName} pageInfo`);
+    throw new Error(
+      `Shopify GraphQL response is missing ${connectionName} pageInfo`,
+    );
   }
 
   const hasNextPage = connection.pageInfo.hasNextPage;
