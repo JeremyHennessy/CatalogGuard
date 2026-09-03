@@ -66,7 +66,9 @@ export async function runVerifiedCatalogPolicyScanV1(
     observedAt.getTime() < startedAt.getTime() ||
     observedAt.getTime() > finishedAt.getTime()
   ) {
-    throw new Error("scan observedAt must fall between startedAt and finishedAt");
+    throw new Error(
+      "scan observedAt must fall between startedAt and finishedAt",
+    );
   }
 
   const catalog = await input.readCatalog();
