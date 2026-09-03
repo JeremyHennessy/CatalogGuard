@@ -35,6 +35,15 @@ test("Shopify CLI recognizes the React Router web process", async () => {
   );
 });
 
+test("React Router actions trust only the configured Shopify app origin", async () => {
+  const routerConfig = await read("react-router.config.ts");
+
+  assert.match(routerConfig, /process\.env\.SHOPIFY_APP_URL/);
+  assert.match(routerConfig, /allowedActionOrigins: configuredActionOrigins\(\)/);
+  assert.match(routerConfig, /return \[parsed\.host\]/);
+  assert.doesNotMatch(routerConfig, /\*\.trycloudflare\.com|\*\*\.trycloudflare\.com/);
+});
+
 test("CatalogGuard Shopify catalog path remains read-only", async () => {
   const source = await read("app/domain/catalog/shopify-source.ts");
   const reader = await read("app/services/shopify/catalog-reader.server.ts");
