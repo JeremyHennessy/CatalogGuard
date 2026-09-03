@@ -2,51 +2,118 @@
 
 This file is the current-state resume point. Update it after meaningful merges/releases/checkpoints.
 
-## Handoff timestamp
+## Exact state
 
-2026-09-03 — project baseline establishment.
-
-## Current canonical repository
-
-`JeremyHennessy/CatalogGuard`
-
-## Starting repository commit observed
-
-`74f7b4468da35bb9720d6843d50f0448479eb890` — `Initial commit`
-
-This was the repository's initial README commit. The final SHA for the documentation baseline must be written here in a follow-up commit or issue/comment after the baseline commit is created, because a commit cannot contain its own SHA.
+```text
+Date/time: 2026-09-03 11:21 ADT
+Canonical repository: JeremyHennessy/CatalogGuard
+Main SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
+Active branch: phase-1/shopify-scaffold
+Branch SHA before this handoff update: 6ab1eef8cd8910c08ea8591eb3d8a17fb59a64f9
+Open PR: #11 (draft) — Phase 1: scaffold read-only Shopify app foundation
+Shopify API version: 2026-07 / ApiVersion.July26
+Requested Shopify scopes: read_products only
+DB migration: prisma/migrations/20240530213853_create_session_table/migration.sql
+Development DB: Prisma + SQLite session storage
+Deployment: none verified
+Shopify app/config version: local shopify.app.toml is not linked to a real app; client_id remains empty
+Shopify CLI reference checked: @shopify/cli 4.7.0; not executed in this workspace
+CI run: 33765543815 — success on branch SHA 6ab1eef8cd8910c08ea8591eb3d8a17fb59a64f9
+```
 
 ## Current phase
 
-**Phase 0 — Baseline / repository foundation**
+**Phase 1 — Shopify scaffold + development-store verification.**
 
-Implementation has **not** started.
+Repository-side scaffold work is implemented and CI-verified. Live Shopify development-store acceptance is still open and Phase 1 must not be called complete until that evidence exists.
 
-## Confirmed current state
+## What is confirmed working
 
-- Repository exists and is private.
-- Initial repository content was only a two-line README.
-- Product scope/architecture/rule semantics/data model/roadmap/quality/commercial/competitive documents are being established as the first substantive baseline.
-- No Shopify application scaffold is verified in this repository.
-- No Shopify Dev Dashboard/Partner app is verified.
-- No Shopify development store installation is verified.
-- No Shopify access token/session configuration is verified.
-- No production host is verified.
-- No production database is verified.
-- No billing integration is verified.
-- No Shopify App Store submission is verified.
+Evidence-backed repository behavior on `phase-1/shopify-scaffold`:
 
-## Current platform baseline
+- Shopify React Router app foundation exists.
+- GraphQL Admin API is pinned to `2026-07` in application and codegen configuration.
+- Local Shopify configuration requests only `read_products`.
+- The authenticated app route contains a read-only product/variant GraphQL query and no product mutation.
+- Shopify session storage uses Prisma with refresh-token fields and expiring offline-token support enabled through the official Shopify application package.
+- Uninstall and app-scope-update webhook handlers are present.
+- `.env.example` contains placeholders only.
+- `package-lock.json` is committed and the permanent quality gate uses `npm ci`.
+- Node is fixed to `22.12.0` in CI.
+- React Router packages are aligned at `7.18.3` and Vite at `7.3.6` after direct non-major security fixes; the patched graph resolves without `--force` or `--legacy-peer-deps`.
+- Quality Gate run `33765543815` completed successfully on SHA `6ab1eef8cd8910c08ea8591eb3d8a17fb59a64f9` with:
+  - locked dependency install;
+  - formatting;
+  - lint;
+  - TypeScript typecheck;
+  - 4/4 Phase 1 contract tests;
+  - Prisma generation/schema validation;
+  - production React Router build.
 
-- Shopify GraphQL Admin API target: `2026-07`.
-- Shopify recommended app direction: React Router template via Shopify CLI.
-- Initial product direction: predominantly read-only.
-- Initial permission direction: minimum catalog read scopes, starting with `read_products` where sufficient.
-- V1 must avoid customer/order data.
-- Public App Store version must implement mandatory compliance webhooks.
-- Public app must use current expiring offline-token behavior.
+## What is not verified
 
-Re-verify platform facts against official Shopify docs if resuming significantly later.
+- No CatalogGuard app identity/client ID is linked in Shopify Dev Dashboard / Partner tooling.
+- No Shopify development-store installation is verified.
+- The embedded app has not been opened in a real Shopify admin from this workspace.
+- The requested `read_products` grant has not been inspected after a real install.
+- The product/variant GraphQL query has not yet been executed against real dev-store data.
+- Session/token refresh behavior has not been exercised against Shopify.
+- No production host, production PostgreSQL database, billing integration, or App Store submission is verified.
+- A pre-update npm audit reported 30 advisories. Direct React Router and Vite findings with non-major fixes were addressed; a post-update audit count has not yet been recorded. Remaining Prisma/codegen/TypeScript-ESLint audit suggestions require separate compatibility analysis and must not be force-applied.
+
+## Latest approved checkpoint
+
+There is **no user-approved implementation checkpoint yet** for the Phase 1 app code. The immutable repository baseline remains `main` SHA `1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f` until the user explicitly approves an implementation state or PR #11 is deliberately merged after acceptance evidence.
+
+## Changes from the baseline
+
+The Phase 1 branch adds the application scaffold and supporting configuration without changing `main`:
+
+- React Router/Shopify application routes and authentication shell;
+- read-only product/variant GraphQL probe;
+- Prisma session schema/migration;
+- Shopify TOML/web configuration;
+- deterministic npm dependency lock;
+- quality-gate workflow;
+- Phase 1 contract tests;
+- minimal entry page for local/development-store access.
+
+No product writes, customer/order scopes, AI functionality, theme changes, full rule engine, or dashboard redesign were added.
+
+## Current blockers
+
+### B1 — Live Shopify acceptance requires an authenticated Shopify developer account/dev store
+
+Evidence: this workspace has GitHub access but no connected Shopify account/tool. `shopify.app.toml` still has an empty `client_id`, and no live install/session evidence exists.
+
+Smallest next external test:
+
+1. install/use Shopify CLI on a local machine with Node `>=22.12.0`;
+2. log into the intended Shopify developer account;
+3. link/create CatalogGuard through Shopify CLI;
+4. run `shopify app dev` and choose a dev store;
+5. install/open the app;
+6. verify requested scope is only `read_products`;
+7. verify real products/variants appear on the CatalogGuard Phase 1 page;
+8. record the app/config identity and evidence here.
+
+### B2 — Dependency advisories beyond the direct React Router/Vite fixes need separate compatibility work
+
+Do not run `npm audit fix --force`. The prior audit suggested major or backwards-moving changes for Prisma, Shopify codegen/session storage, and TypeScript-ESLint chains. Investigate those families independently after preserving the current green branch.
+
+## Next engineering work
+
+Issue #2 permits fixture-driven domain work while live Shopify acceptance is pending. Continue in a separate branch based on the verified Phase 1 head, not by expanding PR #11:
+
+1. define versioned normalized Product/Variant evaluation models;
+2. define explicit field-availability semantics and `UNKNOWN` behavior;
+3. implement rule result/severity/blocking contracts;
+4. implement stable rule registry/codes;
+5. implement schema-validated configurations and constrained scope evaluation;
+6. implement the store-wide SKU/barcode identifier-index abstraction;
+7. add the first small rule batch with PASS/FAIL/NOT_APPLICABLE/UNKNOWN/boundary tests;
+8. keep the domain layer independent of Shopify routes/UI;
+9. do not add weight/inventory/cost rules until exact fields and scopes are verified.
 
 ## Product definition locked at baseline
 
@@ -64,114 +131,16 @@ CatalogGuard is **not** primarily:
 - an automatic bulk fixer;
 - a workflow engine.
 
-## Core differentiator hypothesis
+## Core semantic guardrails
 
-```text
-merchant-defined deterministic policy
-+ immutable policy revisions
-+ legacy debt vs new regression
-+ documented / expiring waivers
-+ reproducible preflight
-+ change-to-policy evidence where supported
-```
-
-This remains a commercial hypothesis until pilot usage/payment evidence exists.
-
-## Next engineering phase
-
-**Phase 1 — Shopify scaffold + development-store verification.**
-
-Required next steps:
-
-1. confirm current `main` HEAD and that baseline docs are present;
-2. inspect any issues created for the roadmap;
-3. verify current Shopify CLI/template requirements;
-4. create/verify Shopify Dev Dashboard app;
-5. scaffold official React Router app;
-6. pin API `2026-07` unless current evidence requires a deliberate change;
-7. configure minimal scopes;
-8. install on dev store;
-9. execute authenticated GraphQL product query;
-10. add CI and record exact versions;
-11. stop and report any platform/credential blocker rather than mocking success.
-
-## Next product implementation after scaffold
-
-Do **not** start with a polished dashboard.
-
-Recommended order:
-
-1. normalized catalog model;
-2. rule engine contracts/tests;
-3. first deterministic rule fixtures;
-4. store-wide identifier index abstraction;
-5. full bulk scan;
-6. findings persistence/UI;
-7. policies;
-8. baseline/regression lifecycle.
-
-## Open implementation questions
-
-These must be resolved with current Shopify API evidence/tests rather than guessed:
-
-- exact GraphQL product/variant selections for all planned rules;
-- exact access scopes required for cost/inventory/weight checks;
-- best supported product-change webhook topics/payload strategy for `2026-07`;
-- best production host/job topology after bulk-processing test;
-- whether one base Finding should be shared across multiple policies or finding identity should include policy context;
-- retention strategy for snapshots/evaluations at large catalog size;
-- which first 15–20 rules create enough merchant value without unnecessary scopes;
-- whether CSV preflight deserves post-MVP investment.
-
-## Commercial questions still unverified
-
-- willingness to pay $19/$49;
-- whether regression detection is a recurring pain for enough merchants;
-- preflight frequency;
-- agency channel strength;
-- acceptable free-tier limits;
-- App Store search conversion.
-
-## Required handoff format for future updates
-
-When updating this file, include:
-
-### Exact state
-
-```text
-Date/time:
-Main SHA:
-Active branch:
-Open PR:
-Shopify API version:
-DB migration:
-Deployment:
-Shopify app/config version:
-```
-
-### What is confirmed working
-
-Only evidence-backed behavior.
-
-### What is not verified
-
-Explicit list.
-
-### Latest approved checkpoint
-
-Exact SHA + what user approved.
-
-### Changes since checkpoint
-
-File/behavior/config/data differences.
-
-### Blockers
-
-Evidence and smallest next investigation.
-
-### Next steps
-
-Ordered, bounded tasks.
+- Rule results remain `PASS`, `FAIL`, `NOT_APPLICABLE`, and `UNKNOWN`.
+- `UNKNOWN` is never silently treated as PASS.
+- Severity and policy blocking are separate concepts.
+- Active waivers change disposition but do not rewrite a failed evaluation as PASS.
+- Policy revisions are immutable for historical evidence.
+- Baseline debt remains distinct from later regressions.
+- Preflight supports `PASS`, `PASS_WITH_WAIVERS`, `FAIL`, and `INDETERMINATE`.
+- Webhook detection must be paired with reconciliation.
 
 ## Resume warning
 
