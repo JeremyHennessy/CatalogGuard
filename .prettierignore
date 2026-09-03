@@ -1,0 +1,10 @@
+node_modules
+build
+.react-router
+.shopify
+prisma/dev.sqlite
+README.md
+AGENTS.md
+PROJECT_BASELINE.md
+SECURITY.md
+docs
