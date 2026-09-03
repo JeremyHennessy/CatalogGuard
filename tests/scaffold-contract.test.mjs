@@ -35,13 +35,18 @@ test("Shopify CLI recognizes the React Router web process", async () => {
   );
 });
 
-test("Phase 1 catalog route contains no Shopify mutation", async () => {
+test("CatalogGuard Shopify catalog path remains read-only", async () => {
+  const source = await read("app/domain/catalog/shopify-source.ts");
+  const reader = await read("app/services/shopify/catalog-reader.server.ts");
+  const scanService = await read("app/services/scans/catalog-policy-scan.server.ts");
   const route = await read("app/routes/app._index.tsx");
+  const combined = [source, reader, scanService, route].join("\n");
 
-  assert.match(route, /query CatalogGuardPhaseOneProducts/);
-  assert.doesNotMatch(route, /\bmutation\b/);
+  assert.match(source, /query CatalogGuardProducts/);
+  assert.match(source, /query CatalogGuardVariants/);
+  assert.doesNotMatch(combined, /\bmutation\b/);
   assert.doesNotMatch(
-    route,
+    combined,
     /productCreate|productUpdate|productVariantsBulkUpdate/,
   );
 });
