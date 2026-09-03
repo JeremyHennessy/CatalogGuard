@@ -4,7 +4,7 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, redirect, useLoaderData } from "react-router";
+import { redirect, useLoaderData, useSubmit } from "react-router";
 import { developmentBaselineScanIdV1 } from "../domain/policy/dev-validation-template";
 import { authenticate } from "../shopify.server";
 import { loadExactRuleExceptionsForEvaluationV1 } from "../services/exceptions/exact-exceptions.server";
@@ -87,7 +87,14 @@ function displayDate(value: string | undefined) {
 
 export default function CatalogGuardOverview() {
   const { apiVersion, overview, shopDomain } = useLoaderData<typeof loader>();
+  const submit = useSubmit();
   const latest = overview.latestComplete;
+
+  const establishBaseline = () =>
+    submit(
+      { intent: ESTABLISH_BASELINE_INTENT },
+      { method: "post", encType: "application/x-www-form-urlencoded" },
+    );
 
   return (
     <s-page heading="CatalogGuard">
@@ -189,16 +196,9 @@ export default function CatalogGuardOverview() {
             Both checks are CRITICAL and blocking. This is a development test
             policy, not a merchant production default.
           </s-paragraph>
-          <Form method="post">
-            <input
-              type="hidden"
-              name="intent"
-              value={ESTABLISH_BASELINE_INTENT}
-            />
-            <s-button type="submit" variant="primary">
-              Establish dev baseline
-            </s-button>
-          </Form>
+          <s-button type="button" variant="primary" onClick={establishBaseline}>
+            Establish dev baseline
+          </s-button>
         </s-section>
       )}
 
