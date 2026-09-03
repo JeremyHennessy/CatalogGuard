@@ -217,20 +217,16 @@ test("required option names evaluate exact variant option names", () => {
   const product = makeProduct({ variants: [variant] });
 
   assert.equal(
-    evaluate(
-      requiredOptionNamesRule,
-      targetFor(product, variant),
-      { requiredNames: ["Size", "Color"] },
-    ).status,
+    evaluate(requiredOptionNamesRule, targetFor(product, variant), {
+      requiredNames: ["Size", "Color"],
+    }).status,
     "PASS",
   );
 
   assert.equal(
-    evaluate(
-      requiredOptionNamesRule,
-      targetFor(product, variant),
-      { requiredNames: ["Size", "Material"] },
-    ).status,
+    evaluate(requiredOptionNamesRule, targetFor(product, variant), {
+      requiredNames: ["Size", "Material"],
+    }).status,
     "FAIL",
   );
 
@@ -240,7 +236,10 @@ test("required option names evaluate exact variant option names", () => {
   assert.equal(
     evaluate(
       requiredOptionNamesRule,
-      targetFor(makeProduct({ variants: [unavailableVariant] }), unavailableVariant),
+      targetFor(
+        makeProduct({ variants: [unavailableVariant] }),
+        unavailableVariant,
+      ),
       { requiredNames: ["Size"] },
     ).status,
     "UNKNOWN",

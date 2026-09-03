@@ -23,7 +23,10 @@ export const requiredTagsRule: RuleDefinition<RequiredTagsConfig> = {
     const object = asObject(input, "CG-TAG-001");
     rejectUnknownKeys(object, ["requiredTags", "match"], "CG-TAG-001");
 
-    if (!Array.isArray(object.requiredTags) || object.requiredTags.length === 0) {
+    if (
+      !Array.isArray(object.requiredTags) ||
+      object.requiredTags.length === 0
+    ) {
       throw new RuleConfigError(
         "CG-TAG-001",
         "requiredTags must be a non-empty array",
@@ -66,7 +69,9 @@ export const requiredTagsRule: RuleDefinition<RequiredTagsConfig> = {
       ];
     }
 
-    const matched = config.requiredTags.filter((tag) => tags.value.includes(tag));
+    const matched = config.requiredTags.filter((tag) =>
+      tags.value.includes(tag),
+    );
     const passes =
       config.match === "ALL"
         ? matched.length === config.requiredTags.length

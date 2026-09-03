@@ -9,7 +9,10 @@ import {
   vendorRequiredRule,
 } from "./builtin/product-attributes";
 import { compareAtRelationshipRule, minimumPriceRule } from "./builtin/pricing";
-import { seoDescriptionRequiredRule, seoTitleRequiredRule } from "./builtin/seo";
+import {
+  seoDescriptionRequiredRule,
+  seoTitleRequiredRule,
+} from "./builtin/seo";
 import { skuRequiredRule, skuUniqueRule } from "./builtin/sku";
 import { requiredTagsRule } from "./builtin/tags";
 

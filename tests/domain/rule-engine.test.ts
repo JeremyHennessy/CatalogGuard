@@ -77,12 +77,17 @@ test("builtin registry contains stable unique rule identities", () => {
   assert.deepEqual(codes, [
     "CG-BARCODE-001@1",
     "CG-BARCODE-002@1",
+    "CG-CAT-001@1",
     "CG-DESC-001@1",
     "CG-MEDIA-001@1",
+    "CG-OPT-001@1",
     "CG-PRICE-001@1",
     "CG-PRICE-002@1",
+    "CG-SEO-001@1",
+    "CG-SEO-002@1",
     "CG-SKU-001@1",
     "CG-SKU-002@1",
+    "CG-TAG-001@1",
     "CG-TYPE-001@1",
     "CG-VENDOR-001@1",
   ]);
