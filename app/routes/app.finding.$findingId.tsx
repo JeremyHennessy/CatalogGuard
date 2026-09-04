@@ -84,9 +84,9 @@ export default function CatalogGuardFindingDetail() {
             </s-list-item>
           ) : null}
         </s-unordered-list>
-        <p>
-          <a href="/app/findings">Back to all findings</a>
-        </p>
+        <s-paragraph>
+          <s-link href="/app/findings">Back to all findings</s-link>
+        </s-paragraph>
       </s-section>
 
       <s-section heading="Resource identity">
