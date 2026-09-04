@@ -1,155 +1,163 @@
 # Current Handoff
 
-This file is the authoritative resume point for CatalogGuard. Repository state, CI, and live Shopify evidence take precedence over conversation memory.
+This file is the authoritative resume point for CatalogGuard. Repository state, CI, live Shopify evidence, and current official Shopify framework guidance take precedence over conversation memory.
 
 ## Exact state
 
 ```text
-Date: 2026-09-03
+Date: 2026-09-04
 Canonical repository: JeremyHennessy/CatalogGuard
 Immutable main baseline SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
-Phase 1 branch: phase-1/shopify-scaffold
-Phase 1 scaffold checkpoint: 86a7deeee8076cc71a3dccde762697d1db6a2543
-Phase 1 PR: #11 (draft)
-Phase 1 issue: #1 CLOSED — live development-store acceptance verified
-Phase 2 branch: phase-2/domain-rule-engine
-Phase 2 code/runtime head before this handoff: 3141e3ff5bd3e930d4f2004a81a4bb2f8c5b2195
-Phase 2 PR: #12 (draft, stacked on Phase 1)
-Phase 2 issue: #2 ready to close as engineering scope complete
+Phase 1: issue #1 CLOSED / PR #11 draft
+Phase 2: issue #2 CLOSED / PR #12 draft stacked on Phase 1
+Phase 3 branch: phase-3/baseline-dashboard
+Phase 3 issue: #13 OPEN
+Phase 3 PR: #14 draft stacked on Phase 2
+Phase 3 embedded-navigation green code head: 68a69539e0304bb20de9435f54393f5054a1e00c
+Phase 3 embedded-navigation Quality Gate: 33868940433 — success
+Phase 3 handoff source: latest phase-3/baseline-dashboard branch head; use git pull --ff-only
 Shopify Admin API: 2026-07 / ApiVersion.July26
-Requested CatalogGuard scopes: read_products only
+React Router: 7.18.3
+Requested/granted Shopify scopes: read_products only
 Shopify development store: catalogguard-dev-p8tpcpjw.myshopify.com
 CatalogGuard installation handle: catalogguard-11
-Observed CatalogGuard requested scopes: read_products
-Observed CatalogGuard granted scopes: read_products
 Embedded App Home: VERIFIED LIVE
 Authenticated real catalog read: VERIFIED LIVE
+Real Phase 3 baseline: VERIFIED LIVE 2026-09-04
+Persisted baseline after restart/refresh: VERIFIED LIVE 2026-09-04
 Production deployment: none verified
 ```
 
-There is **no user-approved merge/checkpoint yet**. Green CI and closed engineering issues are implementation evidence, not permission to merge. `main` remains the immutable baseline until the user explicitly approves a later implementation state.
+There is **no user-approved merge/checkpoint yet**. Green CI, closed engineering issues, and live validation are implementation evidence, not permission to merge. `main` remains the immutable baseline until the user explicitly approves a later implementation state.
 
 ## Phase 1 live acceptance — complete
 
-Issue #1 is closed after direct development-store verification:
-
-- CatalogGuard is installed on `catalogguard-dev-p8tpcpjw.myshopify.com`.
-- Shopify reports the app requests exactly `read_products` and the installation has exactly `read_products` granted.
-- The embedded React Router App Home opens successfully inside Shopify Admin.
-- The app route executed authenticated Admin GraphQL against API `2026-07` and rendered real development-store products/variant counts.
-- No product write, customer, or order scope was added.
-- The earlier blank App Home was traced to a stale/unresolvable Cloudflare quick-tunnel hostname; a fresh dev preview loaded correctly.
-- The earlier `ACCESS_DENIED` was traced to the generated local `shopify.app.development.toml` missing `read_products`; the local linked config was corrected and Shopify then granted the requested scope.
-
-Phase 1 scaffold checkpoint `86a7deeee8076cc71a3dccde762697d1db6a2543` remains CI-green (`33774438006`). PR #11 remains draft/unmerged pending deliberate user approval of the stacked implementation.
+- CatalogGuard is installed on the development store.
+- Shopify reports exactly `read_products` requested and granted.
+- The embedded React Router App Home opens inside Shopify Admin.
+- CatalogGuard executes authenticated Admin GraphQL against API `2026-07` and reads real development-store catalog records.
+- No product-write, customer, or order scope was added.
 
 ## Phase 2 engineering scope — complete
 
-Phase 2 now provides the framework-independent deterministic catalog policy engine plus the source/persistence boundaries needed for a real scan.
+Phase 2 provides the deterministic normalized catalog model, 15 built-in rules, immutable policy/evaluation semantics, findings lifecycle, exact exception semantics, preflight outcomes, evidence-preserving Prisma persistence, exhaustive Shopify product/variant pagination with completeness verification, normalization, and transactional scan orchestration.
 
-### Normalized catalog + 15 built-in rules
-
-Normalized fields retain explicit evidence availability: `AVAILABLE`, `UNAVAILABLE`, `NOT_REQUESTED`, `UNRELIABLE`. Rule status remains `PASS`, `FAIL`, `NOT_APPLICABLE`, `UNKNOWN`; `UNKNOWN` is never coerced to PASS. Severity and blocking remain independent.
-
-Implemented rules:
-
-1. `CG-SKU-001` SKU required
-2. `CG-SKU-002` SKU unique
-3. `CG-BARCODE-001` barcode required
-4. `CG-BARCODE-002` barcode unique
-5. `CG-PRICE-001` minimum price
-6. `CG-PRICE-002` compare-at relationship
-7. `CG-DESC-001` normalized description minimum
-8. `CG-VENDOR-001` vendor required/allow-list
-9. `CG-TYPE-001` product type required/allow-list
-10. `CG-MEDIA-001` minimum media count
-11. `CG-SEO-001` SEO title requirement
-12. `CG-SEO-002` SEO description requirement
-13. `CG-CAT-001` Shopify category requirement
-14. `CG-TAG-001` required tags with exact ALL/ANY semantics
-15. `CG-OPT-001` required variant option names
-
-SKU/barcode uniqueness uses an explicit store-wide identifier index with `COMPLETE`/`PARTIAL` completeness, deterministic `EXACT`/`TRIM` normalization, and no implicit case folding.
-
-### Policy, enforcement, lifecycle, exceptions, preflight
-
-- immutable validated policy revisions;
-- deterministic policy evaluation over registered rule versions;
-- enforcement `COMPLIANT`, `VIOLATION`, `WAIVED`, `INDETERMINATE`, `NOT_APPLICABLE`;
-- exact finding exceptions by shop + rule + resource/subresource;
-- technical FAIL remains FAIL when enforcement is WAIVED;
-- stable finding identity independent of mutable titles/SKUs;
-- finding classifications `BASELINE_DEBT`, `NEW_REGRESSION`, `REOPENED_REGRESSION`, `POLICY_CHANGE_FAILURE`, `UNKNOWN_CAUSE`;
-- PASS can resolve an open finding, UNKNOWN cannot falsely resolve one, and resolved failures can reopen without losing history;
-- preflight `PASS`, `PASS_WITH_WAIVERS`, `FAIL`, `INDETERMINATE`.
-
-### Evidence-preserving persistence
-
-Prisma persistence covers `Shop`, `Policy`, immutable `PolicyRevision`, `PolicyRule`, `Scan`, `Evaluation`, `Finding`, `FindingEvent`, `RuleException`, `PreflightRun`, and `PreflightTarget`, while retaining Shopify `Session` storage.
-
-Migration `20260903132500_add_domain_persistence` is committed. CI validates Prisma and deploys migrations onto a clean SQLite database. Canonical JSON evidence is deterministic. Policy revisions are append-only through the repository boundary. Scan/evaluation/finding/event persistence occurs transactionally with stable IDs and an immutable scan-input fingerprint; replay of an identical COMPLETE scan is idempotent and conflicting scan-ID reuse is rejected.
-
-### Shopify source contract and verified reader
-
-CatalogGuard uses two independent global `read_products` connections so uniqueness cannot silently operate on nested partial variants:
-
-- product stream: identity/status/description/SEO/vendor/type/tags/category/media plus `variantsCount`;
-- global variant stream: identity/SKU/barcode/price/compare-at/options plus parent product ID.
-
-The normalizer rejects duplicate/orphan identities, sorts deterministically, reconciles every product `variantsCount`, and only marks catalog/index completeness `COMPLETE` when both streams reach their end and counts reconcile.
-
-The exhaustive reader rejects GraphQL errors, malformed page info, missing/repeated cursors, page-limit exhaustion, and partial variant reconciliation. Connected Shopify source validation returned 17 fixture products and 26 variants with reconciled counts.
-
-### End-to-end scan composition
-
-The repository-green in-code path is now:
+Repository-green in-code path:
 
 `authenticated Shopify Admin -> exhaustive product/variant read -> normalized complete catalog -> immutable policy evaluation -> transactional scan/finding persistence`
 
-`runVerifiedCatalogPolicyScanV1` derives processed counts from the verified catalog and rejects partial evidence before persistence. `runShopifyCatalogPolicyScanV1` binds the authenticated Shopify Admin client to the transactional Prisma reconciliation repository.
+Rule status remains `PASS`, `FAIL`, `NOT_APPLICABLE`, `UNKNOWN`; enforcement remains separate as `COMPLIANT`, `VIOLATION`, `WAIVED`, `INDETERMINATE`, `NOT_APPLICABLE`.
 
-## Verified permanent Quality Gate checkpoints
+## React Router mutation-origin root cause — resolved live
 
-These are evidence points, not user approvals:
+Repeated early baseline attempts failed with React Router `Bad Request` before CatalogGuard action execution. The same pre-action 400 survived three dispatch shapes, including a bodyless dedicated action route. Normal App Home requests emitted Shopify `authenticate.admin()` logging while failed mutations did not.
+
+CatalogGuard pins React Router `7.18.3`, whose mutation Origin/CSRF validation runs before route actions. Shopify CLI development places the public tunnel origin in front of a local React Router listener, so the browser public origin can differ from the origin represented by the proxied request URL.
+
+CatalogGuard derives `allowedActionOrigins` from the **exact** Shopify public app host supplied by `SHOPIFY_APP_URL`/`HOST` compatibility fallback. Security constraints remain locked: no origin validation disable, no `*.trycloudflare.com` wildcard, no hard-coded transient tunnel host, and the scaffold contract rejects wildcard tunnel origins.
+
+Root-cause code head `888d5fe053da1993113f0362044f22d03e4e6cbf` passed Quality Gate `33802077280` and was verified by the successful live baseline mutation.
+
+## Live Phase 3 baseline — verified 2026-09-04
+
+Observed persisted Overview evidence:
+
+```text
+Baseline completed: 2026-09-04 07:53:27 local display time
+Products evaluated: 17
+Variants evaluated: 26
+PASS evaluations: 6
+FAIL evaluations: 21
+UNKNOWN evaluations: 0
+NOT_APPLICABLE evaluations: 25
+Open findings: 21
+Baseline debt: 21
+New/reopened regressions: 0
+Blocking violations: 21
+Blocking indeterminate: 0
+Waived failures: 0
+```
+
+The evaluation total reconciles exactly: `6 + 21 + 0 + 25 = 52 = 26 variants × 2 development rules`.
+
+The observed open findings are `CG-SKU-001` technical FAILs classified `BASELINE_DEBT`, `CRITICAL`, blocking, `VIOLATION`, message `SKU is required.` Failures present at baseline are therefore debt rather than regressions.
+
+The user later restarted/pulled and the Overview still showed the same baseline timestamp and exact counts. This verifies persistence on reload/restart and that Overview does not silently rescan.
+
+## Repeated-baseline guard — repository verified
+
+Baseline establishment is extracted into `establishDevBaselineV1`. Dedicated tests prove:
+
+1. when a COMPLETE baseline already exists, `ALREADY_ESTABLISHED` returns before policy loading, exception loading, or Shopify scan execution;
+2. when no baseline exists, exactly one deterministic baseline scan runs.
+
+## Findings evidence surface — repository verified
+
+- `/app/findings` reads persisted open findings without rescanning Shopify;
+- list query is shop-scoped, deterministic, capped at 250, and explicitly reports truncation;
+- `/app/finding/:findingId` uses `id + shopId` lookup to prevent cross-shop evidence access;
+- detail exposes current finding state, immutable resource identity, latest Evaluation, scan/policy/rule identity, observed/expected/evidence JSON when present, and ordered `FindingEvent` history;
+- related exception evidence is shown when present;
+- Overview shows ten **Recent open findings** and links to the full list/evidence detail;
+- no Shopify write scope or mutation was added.
+
+Findings code checkpoint `5b93c555fb981f6ab7d244f760bbecd01654a66e` passed Quality Gate `33866964811`.
+
+## Embedded Findings navigation defect — root cause identified and fixed
+
+Live acceptance of the first Findings build exposed a navigation-only defect: Overview persisted and rendered correctly, but **View all open findings** and **View evidence history** opened blank embedded pages.
+
+Repository review found the internal Findings links used raw HTML `<a>` anchors. Shopify's current React Router template explicitly warns that embedded apps must use embedded-aware React Router/Polaris navigation and **do not use `<a>`**; its current App Home example demonstrates internal navigation with `<s-link href="/app/additional">`.
+
+CatalogGuard changed only the navigation boundary:
+
+- all internal Findings/Overview raw anchors -> Shopify `<s-link>`;
+- route loaders, persistence queries, shop scoping, evidence model, scopes, and write behavior are unchanged;
+- scaffold contract now rejects raw `<a>` elements across these internal Findings routes and asserts the required Shopify links.
+
+Final clean code head after removing temporary formatting workflows:
+
+`68a69539e0304bb20de9435f54393f5054a1e00c`
+
+Permanent Quality Gate `33868940433` — **success**. Locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build passed.
+
+## Phase 3 live acceptance still open
+
+One live UI pass remains before Issue #13 should be closed:
+
+1. `git pull --ff-only` on `phase-3/baseline-dashboard` and restart `shopify app dev`;
+2. verify Overview still shows the persisted 07:53:27 baseline and 17 products / 26 variants / 21 baseline-debt findings;
+3. open **View all open findings** and verify the Findings page renders 21 of 21 current findings;
+4. open at least one **View evidence history** link and verify finding status, latest Evaluation, immutable identifiers, and FindingEvent history;
+5. verify Shopify-link navigation back to Findings and Overview works.
+
+If those pass, close Issue #13 and proceed to merchant-facing immutable policy revisions and exact exception/waiver management.
+
+## Next bounded work after live Findings acceptance
+
+1. merchant-facing policy creation/editing through immutable new revisions;
+2. exact exception create/revoke UI while preserving technical FAIL separately from WAIVED enforcement;
+3. preflight persistence/UI;
+4. webhook/incremental detection paired with periodic full reconciliation;
+5. Shopify Bulk Operations evaluation for production-scale catalogs;
+6. production hosting/PostgreSQL only after the current evidence workflow is accepted.
+
+## Repository-green checkpoints
 
 - Phase 1 scaffold: `86a7deeee8076cc71a3dccde762697d1db6a2543` / `33774438006`
-- Phase 2 15-rule core: `a547661bdbb3f017b911f781cee2ba270c50fa8d` / `33769657000`
-- policy/lifecycle: `49dd4f6e49109cb5f3483238e17806df083a8950` / `33777845329`
-- persistence schema: `22b8104c9a191c4b69c6edca4556500461d058ed` / `33779041352`
-- immutable policy repository: `ea0f31f4f555c65aa1b045582ecef1b96fda8acf` / `33780093645`
-- transactional reconciliation: `8c7f0485e483f42d1e35591431eb3ef0042e8b03` / `33780961563`
-- Shopify normalization adapter: `91250ae2046674f494ca728b66875cf15eba1d5c` / `33789213953`
-- verified Shopify reader: `7f55310637c9c351d730d5d7df619856e7ceeac1` / `33789863128`
-- scan orchestration: `3dc27fa035ce8659f58942ef6ae4bf8bd61e5b4b` / `33790470091`
-- server runtime composition: `839d39e80e5be140fe3b2cd61f9d6eae0799ff2d` / `33790689737`
-- prior Phase 2 handoff head: `3141e3ff5bd3e930d4f2004a81a4bb2f8c5b2195` / `33790944303`
-
-All listed permanent gates passed locked install, formatting, lint, TypeScript, domain/scaffold tests, Prisma validation, clean migration deployment where applicable, and production build. Temporary branch-only formatter workflows were removed after mechanical formatting passes.
-
-## Next phase — Phase 3 baseline onboarding + evidence dashboard
-
-Do not auto-establish a baseline on page load. The product spec requires an explicit merchant/onboarding action before current failures become baseline debt.
-
-Create a new branch stacked on the verified Phase 2 branch. First bounded Phase 3 slice:
-
-1. replace the Phase 1 demo product list with a real Overview state;
-2. ensure the authenticated Shopify shop is represented in the `Shop` table without inventing identity;
-3. show explicit `No baseline yet` / scan state;
-4. provide a clearly labelled development-validation policy path rather than silently inventing production merchant thresholds;
-5. on explicit action, create/load the immutable policy revision and run `runShopifyCatalogPolicyScanV1` with `baseline=true`;
-6. render persisted scan counts and current findings from Prisma evidence;
-7. prove same-scan replay/idempotency and baseline finding/event persistence in tests before adding editing/waiver/preflight UI.
-
-After this slice, add Findings drill-down, immutable policy editing, exact exception create/revoke, preflight persistence/UI, webhook/incremental refresh paired with full reconciliation, and evaluate Shopify Bulk Operations for large-catalog production scale.
+- Phase 2 completion handoff: `c65eb5dfc8b84f6dc190679ee56d50033d13b308` / `33793827908`
+- Phase 3 first slice: `da9597471b166569e44a8ca8d35fd9dbd61791b4` / `33795979049`
+- Phase 3 action-origin configuration: `888d5fe053da1993113f0362044f22d03e4e6cbf` / `33802077280`
+- Phase 3 repeated guard + Findings evidence surface: `5b93c555fb981f6ab7d244f760bbecd01654a66e` / `33866964811`
+- Phase 3 embedded-safe Findings navigation: `68a69539e0304bb20de9435f54393f5054a1e00c` / `33868940433`
 
 ## Other unresolved items
 
 - No production host or PostgreSQL deployment is verified.
-- No live baseline scan has yet been persisted from CatalogGuard itself.
-- No merchant-facing policy editor, findings drill-down, waiver UI, or preflight UI exists yet.
+- No merchant-facing policy editor, exception UI, or preflight UI exists yet.
 - No webhook/incremental refresh runtime is wired to the scan service yet.
-- The page reader is correct for validation; Shopify Bulk Operations should be evaluated before production large-catalog scale.
-- Weight/inventory/cost rules remain deferred until exact fields/scopes are deliberately expanded.
+- The page reader is correct for current validation; Shopify Bulk Operations should be evaluated before production large-catalog scale.
+- Weight/inventory/cost rules remain deliberately deferred.
 - Locked install still reports 23 npm advisories (3 moderate, 20 high). Do not use `npm audit fix --force`; investigate dependency families separately.
 
 ## Locked product guardrails

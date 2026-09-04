@@ -35,15 +35,49 @@ test("Shopify CLI recognizes the React Router web process", async () => {
   );
 });
 
-test("Phase 1 catalog route contains no Shopify mutation", async () => {
-  const route = await read("app/routes/app._index.tsx");
+test("React Router actions trust only the configured Shopify app origin", async () => {
+  const routerConfig = await read("react-router.config.ts");
 
-  assert.match(route, /query CatalogGuardPhaseOneProducts/);
-  assert.doesNotMatch(route, /\bmutation\b/);
+  assert.match(routerConfig, /process\.env\.SHOPIFY_APP_URL/);
+  assert.match(
+    routerConfig,
+    /allowedActionOrigins: configuredActionOrigins\(\)/,
+  );
+  assert.match(routerConfig, /return \[parsed\.host\]/);
   assert.doesNotMatch(
-    route,
+    routerConfig,
+    /\*\.trycloudflare\.com|\*\*\.trycloudflare\.com/,
+  );
+});
+
+test("CatalogGuard Shopify catalog path remains read-only", async () => {
+  const source = await read("app/domain/catalog/shopify-source.ts");
+  const reader = await read("app/services/shopify/catalog-reader.server.ts");
+  const scanService = await read(
+    "app/services/scans/catalog-policy-scan.server.ts",
+  );
+  const route = await read("app/routes/app._index.tsx");
+  const combined = [source, reader, scanService, route].join("\n");
+
+  assert.match(source, /query CatalogGuardProducts/);
+  assert.match(source, /query CatalogGuardVariants/);
+  assert.doesNotMatch(combined, /\bmutation\b/);
+  assert.doesNotMatch(
+    combined,
     /productCreate|productUpdate|productVariantsBulkUpdate/,
   );
+});
+
+test("embedded Findings navigation uses Shopify links rather than raw anchors", async () => {
+  const overview = await read("app/routes/app._index.tsx");
+  const findings = await read("app/routes/app.findings.tsx");
+  const findingDetail = await read("app/routes/app.finding.$findingId.tsx");
+  const combined = [overview, findings, findingDetail].join("\n");
+
+  assert.match(overview, /<s-link href="\/app\/findings">/);
+  assert.match(findings, /<s-link href="\/app">/);
+  assert.match(findingDetail, /<s-link href="\/app\/findings">/);
+  assert.doesNotMatch(combined, /<a\b/);
 });
 
 test("environment example contains placeholders rather than token-shaped secrets", async () => {
