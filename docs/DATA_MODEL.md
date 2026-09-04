@@ -216,6 +216,8 @@ metadataJson?
 
 An incremental scan may represent one affected resource/change batch. If implementation uses a distinct EvaluationRun model instead, preserve equivalent evidence.
 
+Implementation note (2026-09-04): merchant-triggered product preflight creates a completed `PREFLIGHT` Scan with normal `Evaluation` rows and `metadataJson` containing `evidenceOnly: true`, the preflight run id, target count, and input fingerprint. It does not update `Finding` or `FindingEvent`; full reconciliation remains the path that mutates current finding lifecycle.
+
 ## 12. BulkOperation
 
 Track Shopify asynchronous bulk work explicitly.
@@ -405,7 +407,7 @@ completedAt?
 ```
 
 
-Implementation note (2026-09-04): the first persisted slice stores `targetDefinitionJson` as canonical evidence containing `inputFingerprint` plus `targetDefinition`. `PreflightTarget` rows materialize exact evaluated product/variant identities and fingerprints. Reusing a preflight run ID with different immutable evidence is rejected rather than treated as an update.
+Implementation note (2026-09-04): the first persisted slice stores `targetDefinitionJson` as canonical evidence containing `inputFingerprint` plus `targetDefinition`. Product preflight now accepts product GIDs, numeric product IDs, or Shopify Admin product URLs, evaluates the selected products against the exact active policy revision, and materializes exact evaluated product/variant identities and fingerprints. Reusing a preflight run or scan ID with different immutable evidence is rejected rather than treated as an update.
 
 ## 20. PreflightTarget
 

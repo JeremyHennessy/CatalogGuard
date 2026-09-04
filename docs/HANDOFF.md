@@ -16,8 +16,8 @@ Phase 4 issue: #15 OPEN
 Phase 4 PR: #16 draft stacked on Phase 3
 Phase 5 branch: phase-5/preflight-evidence
 Phase 5 PR: #17 draft stacked on Phase 4
-Phase 5 code checkpoint: d593dbfcc4468281bebeb5d521377fef16007f6f
-Phase 5 Quality Gate: 33879020074 — success
+Phase 5 code checkpoint: 5fac33d1e0fb09dda5c44ddb46e5d7e58312a182
+Phase 5 Quality Gate: 33883270549 — success
 Phase 5 live acceptance: pending
 Phase 4 combined green code head: d25be542ef26439026ca4288ffd2105434df2610
 Phase 4 combined Quality Gate: 33876152592 — success
@@ -220,18 +220,18 @@ The run remains read-only to Shopify products and uses the current exact-waiver 
 Tests prove exact active-revision capture, stale-revision rejection before scan execution, and `POLICY_CHANGE` cause propagation.
 
 
-## Phase 5 — first preflight evidence slice repository green, live acceptance pending
+## Phase 5 — product preflight execution repository green, live acceptance pending
 
 Branch: `phase-5/preflight-evidence`
 Draft PR: #17 stacked on Phase 4
-Code checkpoint: `d593dbfcc4468281bebeb5d521377fef16007f6f`
-Quality Gate: `33879020074` — **success**
+Code checkpoint: `5fac33d1e0fb09dda5c44ddb46e5d7e58312a182`
+Quality Gate: `33883270549` — **success**
 
-This slice creates the preflight evidence foundation without changing Shopify write permissions or mutating Shopify products.
+This slice creates the preflight evidence foundation and wires the first merchant-triggered product preflight action without changing Shopify write permissions or mutating Shopify products.
 
 ### Deterministic outcome and evidence planning
 
-`summarizePreflightEvaluationsV1` and `buildPreflightEvidencePlanV1` now provide a deterministic preflight contract:
+`summarizePreflightEvaluationsV1` and `buildPreflightEvidencePlanV1` provide a deterministic preflight contract:
 
 - blocking technical violations produce `FAIL`;
 - blocking indeterminate evidence produces `INDETERMINATE` when no blocking violation exists;
@@ -241,21 +241,33 @@ This slice creates the preflight evidence foundation without changing Shopify wr
 - every evaluated product/variant must be present in the materialized target set;
 - target and evaluation order is canonicalized before fingerprinting.
 
-### Immutable persistence boundary
+### Product preflight run action
 
-`PrismaPreflightRepository` persists `PreflightRun` and `PreflightTarget` evidence only after validating that the linked scan exists, is `COMPLETE`, has `scanType: PREFLIGHT`, and matches the same shop + policy revision. Reusing a preflight run ID is allowed only when immutable identity, outcome counts, fingerprinted target definition, and materialized targets match exactly; conflicting reuse errors instead of rewriting history.
+The `/app/preflight` route now includes an authenticated product preflight flow:
 
-`targetDefinitionJson` stores a canonical evidence record containing both `inputFingerprint` and `targetDefinition`.
+- active policy choices are loaded for the shop;
+- target input accepts Shopify product GIDs, bare numeric product IDs, and Shopify Admin product URLs;
+- `expectedRevisionId` guards against stale pages evaluating a different active revision;
+- the verified Shopify catalog reader still requires a complete catalog before evaluation;
+- selected products are evaluated against the active immutable revision while the store-wide identifier index remains available for uniqueness rules;
+- current exact exceptions are applied during evaluation;
+- product and variant targets are materialized with deterministic fingerprints.
 
-### Merchant history surface
+### Evidence-only persistence boundary
 
-The app now has `/app/preflight` and an Overview link to **Preflight evidence**. The route reads persisted preflight runs for the authenticated shop, shows policy revision/outcome/count/source freshness/target evidence, and has an honest empty state when no runs exist.
+Product preflight creates a completed `Scan` with `scanType: PREFLIGHT`, persisted `Evaluation` rows, one immutable `PreflightRun`, and its `PreflightTarget` rows. Scan metadata records `evidenceOnly: true`, the preflight run id, target count, and the plan input fingerprint.
+
+This path deliberately does **not** create or update `Finding`, `FindingEvent`, or current dashboard finding lifecycle state. Full reconciliation remains the explicit path for updating current findings.
+
+Reusing a preflight run or scan ID is allowed only when immutable identity, counts, fingerprinted target definition, materialized targets, and scan metadata match exactly; conflicting reuse errors instead of rewriting history.
+
+### Tests
+
+Focused tests cover outcome ordering, deterministic evidence planning, invalid evidence rejection, product target parsing, exact active-revision stale guards, missing-target rejection before persistence, and evidence-only product run persistence.
 
 ### Boundary still pending
 
-Live preflight run execution is deliberately not wired yet. The existing full-scan reconciliation path mutates current Finding lifecycle, and CatalogGuard still needs an explicit product decision on whether PREFLIGHT scans should update global current findings or remain launch-review evidence only.
-
-Live Shopify acceptance for Phase 5 is pending.
+Live Shopify acceptance for Phase 5 is pending. Collection preflight membership materialization, CSV preflight, and production-scale Bulk Operations remain deferred. Product preflight currently uses the exhaustive verified catalog reader; this preserves correctness for store-wide uniqueness rules but is not yet optimized for large catalogs.
 
 ## Next live acceptance — Phase 4 follow-on
 
@@ -272,11 +284,12 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 
 ## Next engineering work after Phase 4 follow-on live acceptance
 
-1. Wire live preflight run actions after deciding whether PREFLIGHT scans should update global current findings or remain launch-review evidence only.
-2. Webhook/incremental detection paired with periodic full reconciliation.
-3. Evaluate Shopify Bulk Operations before production-scale large-catalog use.
-4. Production hosting/PostgreSQL planning only after the evidence workflow is accepted.
-5. Weight/inventory/cost rules remain deliberately deferred until field/scope requirements are verified.
+1. Live-verify the product preflight action on the Shopify development store without creating another baseline.
+2. Add collection preflight membership materialization and history drill-down.
+3. Webhook/incremental detection paired with periodic full reconciliation.
+4. Evaluate Shopify Bulk Operations before production-scale large-catalog use.
+5. Production hosting/PostgreSQL planning only after the evidence workflow is accepted.
+6. Weight/inventory/cost rules remain deliberately deferred until field/scope requirements are verified.
 
 ## Repository-green checkpoints
 
@@ -288,12 +301,13 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 - Phase 4 overlay-aware enforcement/Overview: `4bcecd95ed082c96dc9cb0eb2587c76cf9e48471` / `33874708162`
 - Phase 4 deterministic config/scope editor: `c46a1333ca17be0b2b86ee0d8991d21aca9fee36` / `33875437504`
 - Phase 4 combined policy-control/reconciliation checkpoint: `d25be542ef26439026ca4288ffd2105434df2610` / `33876152592`
-- Phase 5 preflight evidence/history: `d593dbfcc4468281bebeb5d521377fef16007f6f` / `33879020074`
+- Phase 5 preflight evidence/history: `8a76c5a399841a2d923cc74136e96e3cd801cb5a` / `33879334207`
+- Phase 5 product preflight execution: `5fac33d1e0fb09dda5c44ddb46e5d7e58312a182` / `33883270549`
 
 ## Other unresolved items
 
 - No production host or PostgreSQL deployment is verified.
-- Preflight evidence history UI exists; no live preflight run action is wired or live-verified yet.
+- Product preflight run action is repository-green but not live-verified yet.
 - No webhook/incremental refresh runtime is wired yet.
 - Shopify Bulk Operations has not yet been evaluated for production-scale catalogs.
 - Locked install still reports 23 npm advisories (3 moderate, 20 high). Do not use `npm audit fix --force`; investigate dependency families separately.

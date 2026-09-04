@@ -211,3 +211,14 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 **Reason:** Product sets and collection membership can change after launch review. Historical preflight evidence must remain reproducible without being reinterpreted through the current catalog or a later policy revision.
 
 **Status:** Active. Live preflight execution is not yet wired to merchant run actions; PREFLIGHT scans also do not update current Finding lifecycle until that product semantic is explicitly accepted.
+
+
+## D-022 — Product preflight is evidence-only in V1
+
+**Date:** 2026-09-04
+
+**Decision:** Merchant-triggered product preflight creates immutable `PREFLIGHT` scan, evaluation, preflight-run, and materialized-target evidence, but does not create or update current `Finding` or `FindingEvent` lifecycle state.
+
+**Reason:** Launch review should answer whether the selected target passes the current policy now without changing the global regression/current-state dashboard. Full reconciliation remains the explicit merchant action that updates current findings.
+
+**Status:** Active for product preflight. Collection preflight, CSV preflight, and future publish-blocking semantics remain separate decisions.
