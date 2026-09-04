@@ -24,9 +24,22 @@ export type AppendPolicyRevisionInput = Readonly<{
   snapshot: PolicyRevisionSnapshotMetadata;
 }>;
 
+export type AppendAndActivatePolicyRevisionInput = Readonly<{
+  shopId: string;
+  policyId: string;
+  baseRevisionId: string;
+  name: string;
+  description?: string;
+  revision: ValidatedPolicyRevisionV1;
+  snapshot: PolicyRevisionSnapshotMetadata;
+}>;
+
 export interface PolicyRepository {
   createPolicy(input: CreatePolicyInput): Promise<void>;
   appendRevision(input: AppendPolicyRevisionInput): Promise<void>;
+  appendAndActivateRevision(
+    input: AppendAndActivatePolicyRevisionInput,
+  ): Promise<void>;
   activateRevision(policyId: string, revisionId: string): Promise<void>;
   loadRevisionInput(revisionId: string): Promise<PolicyRevisionInputV1 | null>;
 }
