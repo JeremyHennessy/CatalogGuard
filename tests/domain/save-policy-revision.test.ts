@@ -17,7 +17,7 @@ test("saving a merchant edit appends and activates one validated immutable revis
       baseRevisionId: current.id,
       name: "Warehouse Ready",
       description: "  SKU controls for launch  ",
-      changeSummary: " Make SKU required non-blocking ",
+      changeSummary: " Expand SKU rule scope ",
       createdAt: "2026-09-04T12:00:00.000Z",
       createdByActor: "merchant-user",
       edits: [
@@ -27,6 +27,17 @@ test("saving a merchant edit appends and activates one validated immutable revis
           enabled: true,
           severity: "ERROR",
           blocking: false,
+          config: {},
+          scope: { statuses: ["ACTIVE", "DRAFT"] },
+        },
+        {
+          ruleCode: "CG-SKU-002",
+          ruleVersion: 1,
+          enabled: true,
+          severity: "CRITICAL",
+          blocking: true,
+          config: { normalization: "TRIM" },
+          scope: { statuses: ["ACTIVE"] },
         },
       ],
     },
@@ -47,6 +58,8 @@ test("saving a merchant edit appends and activates one validated immutable revis
 
   assert.equal(revision.revisionNumber, 2);
   assert.equal(revision.id, `${current.policyId}:r2`);
+  assert.deepEqual(revision.rules[0].rule.scope.statuses, ["ACTIVE", "DRAFT"]);
+  assert.deepEqual(revision.rules[1].rule.config, { normalization: "TRIM" });
   assert.equal(writes.length, 1);
   const write = writes[0] as {
     baseRevisionId: string;
@@ -60,8 +73,50 @@ test("saving a merchant edit appends and activates one validated immutable revis
   assert.equal(write.description, "SKU controls for launch");
   assert.equal(write.revision.id, `${current.policyId}:r2`);
   assert.equal(write.revision.revisionNumber, 2);
-  assert.equal(write.snapshot.changeSummary, "Make SKU required non-blocking");
+  assert.equal(write.snapshot.changeSummary, "Expand SKU rule scope");
   assert.equal(write.snapshot.createdByActor, "merchant-user");
+});
+
+test("invalid config or scope never activates a revision", async () => {
+  let writes = 0;
+  await assert.rejects(
+    () =>
+      saveMerchantPolicyRevisionV1(
+        {
+          shopId: "shop_a",
+          policyId: current.policyId,
+          baseRevisionId: current.id,
+          name: "Policy",
+          changeSummary: "Invalid normalization",
+          createdAt: "2026-09-04T12:00:00.000Z",
+          edits: [
+            {
+              ruleCode: "CG-SKU-002",
+              ruleVersion: 1,
+              enabled: true,
+              severity: "CRITICAL",
+              blocking: true,
+              config: { normalization: "LOWERCASE" },
+              scope: { statuses: ["ACTIVE"] },
+            },
+          ],
+        },
+        {
+          loadActivePolicy: async () => ({
+            shopId: "shop_a",
+            policyId: current.policyId,
+            name: "Policy",
+            activeRevisionId: current.id,
+            activeRevision: current,
+          }),
+          appendAndActivate: async () => {
+            writes += 1;
+          },
+        },
+      ),
+    /normalization/,
+  );
+  assert.equal(writes, 0);
 });
 
 test("stale or no-op policy edits do not write a revision", async () => {
