@@ -1,3 +1,4 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
 import {
@@ -35,7 +36,8 @@ function target(input: {
   return Object.freeze({
     resourceType: input.resourceType,
     resourceGid: input.resourceGid,
-    resourceFingerprint: input.fingerprint ?? `${input.resourceGid}:fingerprint`,
+    resourceFingerprint:
+      input.fingerprint ?? `${input.resourceGid}:fingerprint`,
   });
 }
 
@@ -126,7 +128,11 @@ test("preflight fingerprint changes when target evidence changes", () => {
     }),
   ];
 
-  const first = preflightInputFingerprintV1({ run, targets, evaluations: [item] });
+  const first = preflightInputFingerprintV1({
+    run,
+    targets,
+    evaluations: [item],
+  });
   const second = preflightInputFingerprintV1({
     run,
     targets: [
