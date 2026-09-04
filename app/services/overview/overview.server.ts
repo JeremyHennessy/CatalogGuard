@@ -87,7 +87,9 @@ const scanSelect = {
   warningCount: true,
 } as const;
 
-function activeExactExceptionWhere(observedAt: Date): Prisma.RuleExceptionWhereInput {
+function activeExactExceptionWhere(
+  observedAt: Date,
+): Prisma.RuleExceptionWhereInput {
   return {
     coverageType: "FINDING_EXACT",
     createdAt: { lte: observedAt },
