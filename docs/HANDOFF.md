@@ -15,7 +15,7 @@ Phase 3 issue: #13 OPEN
 Phase 3 PR: #14 draft stacked on Phase 2
 Phase 3 embedded-navigation green code head: 68a69539e0304bb20de9435f54393f5054a1e00c
 Phase 3 embedded-navigation Quality Gate: 33868940433 — success
-Phase 3 synchronized handoff head: 1d64dda11e105577f9b1c4287d0286e07b199b5e
+Phase 3 current synchronized head: 09783e3426f00760d54912f892b504fc6b2742d2
 Shopify Admin API: 2026-07 / ApiVersion.July26
 React Router: 7.18.3
 Requested/granted Shopify scopes: read_products only
@@ -96,19 +96,19 @@ The user subsequently pulled/restarted the next Phase 3 build and the Overview s
 
 Baseline establishment is extracted into `establishDevBaselineV1` so the route remains a thin authenticated adapter.
 
-The application service proves two separate paths:
+The application service proves two paths:
 
 1. when a COMPLETE baseline already exists, it returns `ALREADY_ESTABLISHED` **before** policy creation/loading, exception loading, or Shopify scan execution;
 2. when no baseline exists, it creates/loads the dev policy, loads exact exceptions, uses the deterministic baseline scan identity, and executes exactly one baseline scan.
 
-Dedicated tests cover both paths. This removes reliance on persistence idempotency alone for the repeated-baseline guard.
+Dedicated tests cover both paths.
 
 ## Findings evidence surface — repository verified
 
 The first proper Findings surface is implemented:
 
 - `/app/findings` reads persisted open findings without rescanning Shopify;
-- list query is shop-scoped, ordered deterministically, capped at 250, and explicitly reports truncation rather than pretending the list is exhaustive;
+- list query is shop-scoped, ordered deterministically, capped at 250, and explicitly reports truncation;
 - `/app/finding/:findingId` uses `id + shopId` lookup to prevent cross-shop evidence access;
 - detail exposes current finding state, immutable resource identity, latest evaluation, scan/policy/rule identity, observed/expected/evidence JSON when present, and ordered `FindingEvent` history;
 - related exception evidence is shown when present;
@@ -123,14 +123,14 @@ Live acceptance of the first Findings build exposed a navigation-only defect: Ov
 
 The routes/loaders were not changed for this fix. Repository review found all internal Findings navigation used raw HTML `<a>` anchors. Shopify's current React Router template explicitly warns that embedded apps must preserve the session through embedded-aware navigation: use React Router/Polaris navigation and **do not use `<a>`**. The same current template demonstrates internal navigation with `<s-link href="/app/additional">`.
 
-CatalogGuard therefore changed only the embedded navigation boundary:
+CatalogGuard changed only the embedded navigation boundary:
 
 - Overview `/app/findings` link: raw `<a>` -> Shopify `<s-link>`;
 - Overview finding-detail links: raw `<a>` -> Shopify `<s-link>`;
 - Findings back-to-Overview link: raw `<a>` -> Shopify `<s-link>`;
 - Findings detail links: raw `<a>` -> Shopify `<s-link>`;
 - Finding-detail back link: raw `<a>` -> Shopify `<s-link>`;
-- scaffold contract now rejects raw `<a>` elements across these internal Findings routes and asserts the required Shopify links.
+- scaffold contract rejects raw `<a>` elements across these internal Findings routes and asserts the required Shopify links.
 
 No loader, Prisma query, shop-scope guard, finding/evaluation/event model, Shopify scope, or write behavior changed.
 
@@ -144,7 +144,7 @@ Permanent Quality Gate `33868940433` — **success**. Locked install, formatting
 
 One live UI pass remains before Issue #13 should be closed:
 
-1. pull/restart the synchronized head `1d64dda11e105577f9b1c4287d0286e07b199b5e` or later;
+1. pull/restart the synchronized head `09783e3426f00760d54912f892b504fc6b2742d2` or later;
 2. verify Overview still shows the persisted 2026-09-04 07:53:27 baseline and 17 products / 26 variants / 21 baseline-debt findings;
 3. open **View all open findings** and verify the Findings page renders 21 of 21 current findings;
 4. open at least one **View evidence history** link and verify finding status, latest Evaluation, immutable identifiers, and FindingEvent history render;
