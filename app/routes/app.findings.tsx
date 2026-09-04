@@ -43,9 +43,9 @@ export default function CatalogGuardFindings() {
             ? " The list is capped for this first evidence view; pagination is still required."
             : ""}
         </s-paragraph>
-        <p>
-          <a href="/app">Back to overview</a>
-        </p>
+        <s-paragraph>
+          <s-link href="/app">Back to overview</s-link>
+        </s-paragraph>
       </s-section>
 
       {findings.items.length === 0 ? (
@@ -66,9 +66,11 @@ export default function CatalogGuardFindings() {
                 {finding.evaluation.message} — target{" "}
                 {finding.subresourceGid ?? finding.resourceGid} — last seen{" "}
                 {displayDate(finding.lastSeenAt)} —{" "}
-                <a href={`/app/finding/${encodeURIComponent(finding.id)}`}>
+                <s-link
+                  href={`/app/finding/${encodeURIComponent(finding.id)}`}
+                >
                   View evidence history
-                </a>
+                </s-link>
               </s-list-item>
             ))}
           </s-unordered-list>
