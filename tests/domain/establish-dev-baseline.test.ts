@@ -80,7 +80,7 @@ test("missing baseline executes one deterministic baseline scan", async () => {
       assert.equal(input.startedAt, createdAt);
       assert.equal(input.observedAt, createdAt);
       assert.equal(input.finishedAt, createdAt);
-      assert.equal(input.revision.revisionId, revision.revisionId);
+      assert.equal(input.revision.id, revision.id);
       return { status: "PERSISTED" as const };
     },
   });
