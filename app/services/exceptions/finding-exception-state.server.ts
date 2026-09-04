@@ -1,8 +1,23 @@
 import prisma from "../../db.server";
 import {
+  currentEnforcementForRuleStatusV1,
   isExceptionActiveAt,
   type ExactRuleExceptionV1,
 } from "../../domain/policy/evaluator";
+import type { RuleStatus } from "../../domain/rules/contracts";
+
+function ruleStatus(value: string): RuleStatus {
+  if (
+    value === "PASS" ||
+    value === "FAIL" ||
+    value === "NOT_APPLICABLE" ||
+    value === "UNKNOWN"
+  ) {
+    return value;
+  }
+
+  throw new Error(`unsupported persisted rule status: ${value}`);
+}
 
 export async function loadFindingExceptionStateV1(
   shopId: string,
@@ -71,13 +86,14 @@ export async function loadFindingExceptionStateV1(
     }),
   );
   const active = history.find((exception) => exception.active) ?? null;
-  const effectiveEnforcement =
-    finding.latestEvaluation.status === "FAIL" && active
-      ? "WAIVED"
-      : finding.latestEvaluation.enforcement;
+  const technicalStatus = ruleStatus(finding.latestEvaluation.status);
+  const effectiveEnforcement = currentEnforcementForRuleStatusV1(
+    technicalStatus,
+    Boolean(active),
+  );
 
   return Object.freeze({
-    latestTechnicalStatus: finding.latestEvaluation.status,
+    latestTechnicalStatus: technicalStatus,
     persistedEvaluationEnforcement: finding.latestEvaluation.enforcement,
     effectiveEnforcement,
     active,
