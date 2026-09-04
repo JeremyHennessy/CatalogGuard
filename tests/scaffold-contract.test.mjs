@@ -24,6 +24,17 @@ test("Phase 1 scopes are read-only and catalog-only", async () => {
   assert.doesNotMatch(envExample, /write_products|read_customers|read_orders/);
 });
 
+test("Shopify app config subscribes to product catalog webhooks", async () => {
+  const appConfig = await read("shopify.app.toml");
+
+  assert.match(appConfig, /uri = "\/webhooks\/products"/);
+  assert.match(
+    appConfig,
+    /topics = \["products\/create", "products\/update", "products\/delete"\]/,
+  );
+  assert.doesNotMatch(appConfig, /write_products/);
+});
+
 test("Shopify CLI recognizes the React Router web process", async () => {
   const webConfig = await read("shopify.web.toml");
 

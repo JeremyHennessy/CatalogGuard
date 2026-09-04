@@ -46,6 +46,7 @@ model Shop {
   findings                 Finding[]
   exceptions               RuleException[]
   preflightRuns            PreflightRun[]
+  catalogChangeEvents      CatalogChangeEvent[]
 }
 
 model Policy {
@@ -275,4 +276,30 @@ model PreflightTarget {
   preflightRun        PreflightRun @relation(fields: [preflightRunId], references: [id], onDelete: Restrict)
 
   @@unique([preflightRunId, resourceType, resourceGid])
+}
+
+
+model CatalogChangeEvent {
+  id                 String    @id
+  shopId             String?
+  shopDomain         String
+  topic              String
+  apiVersion         String
+  resourceType       String
+  resourceGid        String?
+  legacyResourceId   String
+  payloadIdPrecision String
+  payloadFingerprint String
+  payloadJson        String
+  processingState    String    @default("PENDING_INCREMENTAL_RECONCILIATION")
+  receivedAt         DateTime  @default(now())
+  payloadUpdatedAt   DateTime?
+  processedAt        DateTime?
+  errorSummary       String?
+  shop               Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, processingState, receivedAt])
+  @@index([shopDomain, topic, receivedAt])
+  @@index([resourceType, resourceGid])
+  @@index([payloadFingerprint])
 }
