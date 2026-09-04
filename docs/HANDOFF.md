@@ -13,8 +13,9 @@ Phase 2: issue #2 CLOSED / PR #12 draft stacked on Phase 1
 Phase 3 branch: phase-3/baseline-dashboard
 Phase 3 issue: #13 OPEN
 Phase 3 PR: #14 draft stacked on Phase 2
-Phase 3 latest green clean code head: 68a69539e0304bb20de9435f54393f5054a1e00c
-Phase 3 latest Quality Gate: 33868940433 — success
+Phase 3 embedded-navigation green code head: 68a69539e0304bb20de9435f54393f5054a1e00c
+Phase 3 embedded-navigation Quality Gate: 33868940433 — success
+Phase 3 synchronized handoff head: 1d64dda11e105577f9b1c4287d0286e07b199b5e
 Shopify Admin API: 2026-07 / ApiVersion.July26
 React Router: 7.18.3
 Requested/granted Shopify scopes: read_products only
@@ -143,7 +144,7 @@ Permanent Quality Gate `33868940433` — **success**. Locked install, formatting
 
 One live UI pass remains before Issue #13 should be closed:
 
-1. pull/restart head `68a69539e0304bb20de9435f54393f5054a1e00c` (or later synchronized docs head);
+1. pull/restart the synchronized head `1d64dda11e105577f9b1c4287d0286e07b199b5e` or later;
 2. verify Overview still shows the persisted 2026-09-04 07:53:27 baseline and 17 products / 26 variants / 21 baseline-debt findings;
 3. open **View all open findings** and verify the Findings page renders 21 of 21 current findings;
 4. open at least one **View evidence history** link and verify finding status, latest Evaluation, immutable identifiers, and FindingEvent history render;
