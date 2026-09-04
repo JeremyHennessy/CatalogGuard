@@ -3,6 +3,14 @@ import prisma from "../../db.server";
 const PREFLIGHT_RUN_LIMIT = 50;
 const PREFLIGHT_TARGET_PREVIEW_LIMIT = 8;
 
+export type PreflightPolicyChoiceV1 = Readonly<{
+  id: string;
+  name: string;
+  activeRevisionId: string;
+  activeRevisionNumber: number;
+  activeRevisionCreatedAt: string;
+}>;
+
 export type PreflightRunListItemV1 = Readonly<{
   id: string;
   scanId: string;
@@ -29,6 +37,49 @@ export type PreflightRunListItemV1 = Readonly<{
   targetCount: number;
   targetsTruncated: boolean;
 }>;
+
+export async function loadPreflightPolicyChoicesV1(shopId: string) {
+  const rows = await prisma.policy.findMany({
+    where: { shopId, status: "ACTIVE" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      activeRevisionId: true,
+      revisions: {
+        orderBy: { revisionNumber: "desc" },
+        select: {
+          id: true,
+          revisionNumber: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  return Object.freeze(
+    rows.flatMap((row) => {
+      if (!row.activeRevisionId) return [];
+
+      const activeRevision = row.revisions.find(
+        (revision) => revision.id === row.activeRevisionId,
+      );
+      if (!activeRevision) {
+        throw new Error("active policy revision is missing from policy history");
+      }
+
+      return [
+        Object.freeze({
+          id: row.id,
+          name: row.name,
+          activeRevisionId: row.activeRevisionId,
+          activeRevisionNumber: activeRevision.revisionNumber,
+          activeRevisionCreatedAt: activeRevision.createdAt.toISOString(),
+        }) satisfies PreflightPolicyChoiceV1,
+      ];
+    }),
+  );
+}
 
 export async function loadRecentPreflightRunsV1(shopId: string) {
   const rows = await prisma.preflightRun.findMany({
