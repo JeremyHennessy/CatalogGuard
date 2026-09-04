@@ -31,7 +31,9 @@ test("exact waiver creation preserves finding identity and requires one active w
       loadFinding: async () => finding,
       loadExactExceptions: async () => [],
       nextId: () => "exception_a",
-      persistCreate: async (input) => writes.push(input),
+      persistCreate: async (input) => {
+        writes.push(input);
+      },
     },
   );
 
@@ -132,7 +134,9 @@ test("revocation is scoped to shop plus finding and never deletes the exception"
       createdAt: "2026-09-04T12:00:00.000Z",
       findingId: "finding_a",
     }),
-    persistRevoke: async (input: unknown) => writes.push(input),
+    persistRevoke: async (input: unknown) => {
+      writes.push(input);
+    },
   };
 
   await assert.rejects(
