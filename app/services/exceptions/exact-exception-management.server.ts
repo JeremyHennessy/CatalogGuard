@@ -131,6 +131,7 @@ export async function createExactFindingWaiverForShopV1(input: {
 
 export async function revokeExactFindingWaiverForShopV1(input: {
   shopId: string;
+  findingId: string;
   exceptionId: string;
   revokedAt: string;
   revokedByActor?: string;
@@ -170,7 +171,7 @@ export async function revokeExactFindingWaiverForShopV1(input: {
     }) => {
       await prisma.$transaction(async (tx) => {
         const result = await tx.ruleException.updateMany({
-          where: { id: exceptionId, shopId, revokedAt: null },
+          where: { id: exceptionId, shopId, findingId, revokedAt: null },
           data: {
             revokedAt: new Date(revokedAt),
             revokedByActor,
@@ -181,17 +182,15 @@ export async function revokeExactFindingWaiverForShopV1(input: {
           throw new Error("waiver changed before revocation could be persisted");
         }
 
-        if (findingId) {
-          await tx.findingEvent.create({
-            data: {
-              id: `finding-event_${randomUUID()}`,
-              findingId,
-              eventType: "EXCEPTION_REVOKED",
-              exceptionId,
-              createdAt: new Date(revokedAt),
-            },
-          });
-        }
+        await tx.findingEvent.create({
+          data: {
+            id: `finding-event_${randomUUID()}`,
+            findingId,
+            eventType: "EXCEPTION_REVOKED",
+            exceptionId,
+            createdAt: new Date(revokedAt),
+          },
+        });
       });
     },
   });
