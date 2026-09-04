@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import { redirect } from "react-router";
-import { developmentBaselineScanIdV1 } from "../domain/policy/dev-validation-template";
+import { establishDevBaselineV1 } from "../application/establish-dev-baseline";
 import { authenticate } from "../shopify.server";
 import { loadExactRuleExceptionsForEvaluationV1 } from "../services/exceptions/exact-exceptions.server";
 import { loadCatalogGuardOverviewV1 } from "../services/overview/overview.server";
@@ -21,32 +21,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     currentScopes: session.scope,
     apiVersion: API_VERSION,
   });
-  const overview = await loadCatalogGuardOverviewV1(shop.id);
 
-  if (overview.baseline) {
-    return redirect("/app");
-  }
-
-  const now = new Date().toISOString();
-  const revision = await ensureDevValidationPolicyV1({
-    shopId: shop.id,
-    createdAt: now,
-  });
-  const exceptions = await loadExactRuleExceptionsForEvaluationV1(shop.id);
-
-  await runShopifyCatalogPolicyScanV1({
+  await establishDevBaselineV1({
     admin,
-    scanId: developmentBaselineScanIdV1(shop.id),
     shopId: shop.id,
-    scanType: "BASELINE",
     apiVersion: API_VERSION,
     engineVersion: ENGINE_VERSION,
-    startedAt: now,
-    observedAt: now,
-    finishedAt: now,
-    revision,
-    exceptions,
-    baseline: true,
+    now: () => new Date().toISOString(),
+    loadOverview: loadCatalogGuardOverviewV1,
+    ensurePolicy: ensureDevValidationPolicyV1,
+    loadExceptions: loadExactRuleExceptionsForEvaluationV1,
+    runScan: runShopifyCatalogPolicyScanV1,
   });
 
   return redirect("/app");
