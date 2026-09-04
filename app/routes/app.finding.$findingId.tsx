@@ -1,8 +1,5 @@
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import type {
-  HeadersFunction,
-  LoaderFunctionArgs,
-} from "react-router";
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { loadFindingDetailV1 } from "../services/findings/findings.server";
@@ -74,11 +71,17 @@ export default function CatalogGuardFindingDetail() {
           {latest.reasonCode ? (
             <s-list-item>Reason code: {latest.reasonCode}</s-list-item>
           ) : null}
-          <s-list-item>First seen: {displayDate(finding.firstSeenAt)}</s-list-item>
-          <s-list-item>Last seen: {displayDate(finding.lastSeenAt)}</s-list-item>
+          <s-list-item>
+            First seen: {displayDate(finding.firstSeenAt)}
+          </s-list-item>
+          <s-list-item>
+            Last seen: {displayDate(finding.lastSeenAt)}
+          </s-list-item>
           <s-list-item>Reopened count: {finding.reopenedCount}</s-list-item>
           {finding.resolvedAt ? (
-            <s-list-item>Resolved: {displayDate(finding.resolvedAt)}</s-list-item>
+            <s-list-item>
+              Resolved: {displayDate(finding.resolvedAt)}
+            </s-list-item>
           ) : null}
         </s-unordered-list>
         <p>
@@ -106,7 +109,9 @@ export default function CatalogGuardFindingDetail() {
           <s-list-item>Scan id: {latest.scanId}</s-list-item>
           <s-list-item>Policy revision: {latest.policyRevisionId}</s-list-item>
           <s-list-item>Rule version: {latest.ruleVersion}</s-list-item>
-          <s-list-item>Evaluated: {displayDate(latest.evaluatedAt)}</s-list-item>
+          <s-list-item>
+            Evaluated: {displayDate(latest.evaluatedAt)}
+          </s-list-item>
           {latest.exceptionId ? (
             <s-list-item>Exception id: {latest.exceptionId}</s-list-item>
           ) : null}

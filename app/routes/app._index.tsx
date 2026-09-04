@@ -130,9 +130,7 @@ export default function CatalogGuardOverview() {
                       : " / non-blocking"} — {finding.enforcement} —{" "}
                     {finding.message} — resource{" "}
                     {finding.subresourceGid ?? finding.resourceGid} —{" "}
-                    <a
-                      href={`/app/finding/${encodeURIComponent(finding.id)}`}
-                    >
+                    <a href={`/app/finding/${encodeURIComponent(finding.id)}`}>
                       View evidence history
                     </a>
                   </s-list-item>

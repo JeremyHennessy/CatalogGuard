@@ -1,8 +1,5 @@
 import { boundary } from "@shopify/shopify-app-react-router/server";
-import type {
-  HeadersFunction,
-  LoaderFunctionArgs,
-} from "react-router";
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { loadOpenFindingsV1 } from "../services/findings/findings.server";
@@ -64,7 +61,8 @@ export default function CatalogGuardFindings() {
                 {finding.evaluation.severity}
                 {finding.evaluation.blocking
                   ? " / blocking"
-                  : " / non-blocking"} — {finding.evaluation.enforcement} —{" "}
+                  : " / non-blocking"}{" "}
+                — {finding.evaluation.enforcement} —{" "}
                 {finding.evaluation.message} — target{" "}
                 {finding.subresourceGid ?? finding.resourceGid} — last seen{" "}
                 {displayDate(finding.lastSeenAt)} —{" "}
