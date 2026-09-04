@@ -54,6 +54,13 @@ function assertSameTargets(
   }
 }
 
+function targetDefinitionRecordJson(plan: PreflightEvidencePlanV1) {
+  return canonicalJsonStringify({
+    inputFingerprint: plan.inputFingerprint,
+    targetDefinition: plan.run.targetDefinition,
+  });
+}
+
 async function validateLinkedScan(
   tx: Prisma.TransactionClient,
   plan: PreflightEvidencePlanV1,
@@ -98,9 +105,7 @@ export class PrismaPreflightRepository implements PreflightRepository {
     return this.client.$transaction(async (tx) => {
       await validateLinkedScan(tx, plan);
 
-      const targetDefinitionJson = canonicalJsonStringify(
-        plan.run.targetDefinition,
-      );
+      const targetDefinitionJson = targetDefinitionRecordJson(plan);
       const existing = await tx.preflightRun.findUnique({
         where: { id: plan.run.id },
         select: {
