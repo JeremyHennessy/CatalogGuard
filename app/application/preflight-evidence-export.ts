@@ -1,4 +1,7 @@
-import { canonicalJsonStringify, parseCanonicalJson } from "../persistence/json";
+import {
+  canonicalJsonStringify,
+  parseCanonicalJson,
+} from "../persistence/json";
 
 export type PreflightRunEvidenceDetailV1 = Readonly<{
   id: string;
@@ -164,10 +167,14 @@ function targetDefinitionRecord(value: string) {
     throw new Error("preflight targetDefinitionJson must be an object");
   }
   if (typeof parsed.inputFingerprint !== "string") {
-    throw new Error("preflight targetDefinitionJson is missing inputFingerprint");
+    throw new Error(
+      "preflight targetDefinitionJson is missing inputFingerprint",
+    );
   }
   if (!isObject(parsed.targetDefinition)) {
-    throw new Error("preflight targetDefinitionJson is missing targetDefinition");
+    throw new Error(
+      "preflight targetDefinitionJson is missing targetDefinition",
+    );
   }
 
   return Object.freeze({
@@ -203,7 +210,9 @@ export function buildPreflightEvidenceExportV1(
       blockingViolationCount: detail.blockingViolationCount,
       waiverCount: detail.waiverCount,
       indeterminateBlockingCount: detail.indeterminateBlockingCount,
-      ...(detail.createdByActor ? { createdByActor: detail.createdByActor } : {}),
+      ...(detail.createdByActor
+        ? { createdByActor: detail.createdByActor }
+        : {}),
       createdAt: detail.createdAt,
       ...(detail.completedAt ? { completedAt: detail.completedAt } : {}),
     }),
@@ -232,7 +241,9 @@ export function buildPreflightEvidenceExportV1(
       unknownCount: detail.scan.unknownCount,
       notApplicableCount: detail.scan.notApplicableCount,
       warningCount: detail.scan.warningCount,
-      ...(detail.scan.errorSummary ? { errorSummary: detail.scan.errorSummary } : {}),
+      ...(detail.scan.errorSummary
+        ? { errorSummary: detail.scan.errorSummary }
+        : {}),
       ...(scanMetadata !== undefined ? { metadata: scanMetadata } : {}),
     }),
     materializedTargets: detail.targets,
@@ -270,7 +281,9 @@ export function buildPreflightEvidenceExportV1(
           ...(observed !== undefined ? { observed } : {}),
           ...(expected !== undefined ? { expected } : {}),
           message: evaluation.message,
-          ...(evaluation.reasonCode ? { reasonCode: evaluation.reasonCode } : {}),
+          ...(evaluation.reasonCode
+            ? { reasonCode: evaluation.reasonCode }
+            : {}),
           ...(evidence !== undefined ? { evidence } : {}),
           evaluatedAt: evaluation.evaluatedAt,
           policyRule: evaluation.policyRule,

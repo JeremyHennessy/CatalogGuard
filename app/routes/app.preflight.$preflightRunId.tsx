@@ -41,10 +41,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 
   const { session, shop } = await authenticatedShop(request);
-  const detail = await loadPreflightRunDetailV1(
-    shop.id,
-    params.preflightRunId,
-  );
+  const detail = await loadPreflightRunDetailV1(shop.id, params.preflightRunId);
   if (!detail) {
     throw new Response("Preflight run not found", { status: 404 });
   }
@@ -92,7 +89,9 @@ export default function CatalogGuardPreflightDetail() {
         </s-unordered-list>
         <s-paragraph>
           <s-link href="/app/preflight">Back to preflights</s-link>{" "}
-          <s-link href={"/app/preflight/" + encodeURIComponent(run.id) + "/export"}>
+          <s-link
+            href={"/app/preflight/" + encodeURIComponent(run.id) + "/export"}
+          >
             Export JSON
           </s-link>
         </s-paragraph>
@@ -110,12 +109,14 @@ export default function CatalogGuardPreflightDetail() {
           <s-list-item>Pass: {scan.passCount}</s-list-item>
           <s-list-item>Fail: {scan.failCount}</s-list-item>
           <s-list-item>Unknown: {scan.unknownCount}</s-list-item>
-          <s-list-item>
-            Not applicable: {scan.notApplicableCount}
-          </s-list-item>
+          <s-list-item>Not applicable: {scan.notApplicableCount}</s-list-item>
           <s-list-item>Warnings: {scan.warningCount}</s-list-item>
-          <s-list-item>Products processed: {scan.productsProcessed}</s-list-item>
-          <s-list-item>Variants processed: {scan.variantsProcessed}</s-list-item>
+          <s-list-item>
+            Products processed: {scan.productsProcessed}
+          </s-list-item>
+          <s-list-item>
+            Variants processed: {scan.variantsProcessed}
+          </s-list-item>
         </s-unordered-list>
       </s-section>
 
@@ -142,7 +143,9 @@ export default function CatalogGuardPreflightDetail() {
       </s-section>
 
       <s-section
-        heading={"Materialized targets (" + evidence.materializedTargets.length + ")"}
+        heading={
+          "Materialized targets (" + evidence.materializedTargets.length + ")"
+        }
       >
         <s-unordered-list>
           {evidence.materializedTargets.map((target) => (
@@ -160,9 +163,10 @@ export default function CatalogGuardPreflightDetail() {
             <s-list-item key={evaluation.id}>
               {evaluation.ruleCode}@{evaluation.ruleVersion} -{" "}
               {evaluation.policyRule.severity}
-              {evaluation.policyRule.blocking ? " blocking" : " non-blocking"}{" "}
-              - {evaluation.status} / {evaluation.enforcement} -{" "}
-              {evaluation.resourceGid}
+              {evaluation.policyRule.blocking
+                ? " blocking"
+                : " non-blocking"} - {evaluation.status} /{" "}
+              {evaluation.enforcement} - {evaluation.resourceGid}
               {evaluation.subresourceGid
                 ? " - " + evaluation.subresourceGid
                 : ""}{" "}

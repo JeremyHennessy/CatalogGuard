@@ -28,10 +28,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 
   const { shop } = await authenticatedShop(request);
-  const detail = await loadPreflightRunDetailV1(
-    shop.id,
-    params.preflightRunId,
-  );
+  const detail = await loadPreflightRunDetailV1(shop.id, params.preflightRunId);
   if (!detail) {
     throw new Response("Preflight run not found", { status: 404 });
   }
@@ -40,9 +37,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Content-Disposition":
-        "attachment; filename=\"" +
-        exportFilename(params.preflightRunId) +
-        "\"",
+        'attachment; filename="' + exportFilename(params.preflightRunId) + '"',
     },
   });
 };

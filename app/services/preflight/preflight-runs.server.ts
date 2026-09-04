@@ -430,14 +430,12 @@ export async function loadPreflightRunDetailV1(
                   createdAt: evaluation.exception.createdAt.toISOString(),
                   ...(evaluation.exception.expiresAt
                     ? {
-                        expiresAt:
-                          evaluation.exception.expiresAt.toISOString(),
+                        expiresAt: evaluation.exception.expiresAt.toISOString(),
                       }
                     : {}),
                   ...(evaluation.exception.revokedAt
                     ? {
-                        revokedAt:
-                          evaluation.exception.revokedAt.toISOString(),
+                        revokedAt: evaluation.exception.revokedAt.toISOString(),
                       }
                     : {}),
                 }),
