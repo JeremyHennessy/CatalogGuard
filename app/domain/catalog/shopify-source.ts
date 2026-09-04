@@ -59,6 +59,25 @@ export const SHOPIFY_VARIANTS_QUERY_V1 = `#graphql
   }
 `;
 
+export const SHOPIFY_COLLECTION_PRODUCTS_QUERY_V1 = `#graphql
+  query CatalogGuardCollectionProducts($id: ID!, $first: Int!, $after: String) {
+    collection(id: $id) {
+      id
+      handle
+      title
+      products(first: $first, after: $after) {
+        nodes {
+          id
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+`;
+
 export type ShopifyProductSourceV1 = Readonly<{
   id: string;
   title: string;
@@ -74,6 +93,10 @@ export type ShopifyProductSourceV1 = Readonly<{
   category: Readonly<{ id: string }> | null;
   mediaCount: Readonly<{ count: number }>;
   variantsCount: Readonly<{ count: number }>;
+}>;
+
+export type ShopifyCollectionProductSourceV1 = Readonly<{
+  id: string;
 }>;
 
 export type ShopifyVariantSourceV1 = Readonly<{

@@ -354,3 +354,210 @@ export async function runProductPreflightV1<TAdmin>(
     persistence,
   });
 }
+
+export type CollectionPreflightTargetV1 = Readonly<{
+  collectionGid: string;
+  collectionHandle?: string;
+  collectionTitle?: string;
+  productGids: readonly string[];
+}>;
+
+export type RunCollectionPreflightInputV1<TAdmin> = Readonly<{
+  admin: TAdmin;
+  shopId: string;
+  policyId: string;
+  expectedRevisionId: string;
+  collectionTargetText: string;
+  apiVersion: string;
+  engineVersion: string;
+  createdByActor?: string;
+  now: () => string;
+  nextScanId: () => string;
+  nextPreflightRunId: () => string;
+  loadActiveRevision(
+    shopId: string,
+    policyId: string,
+  ): Promise<ValidatedPolicyRevisionV1 | null>;
+  loadExceptions(shopId: string): Promise<readonly ExactRuleExceptionV1[]>;
+  readCatalog(admin: TAdmin): Promise<NormalizedShopifyCatalogV1>;
+  readCollectionTarget(
+    admin: TAdmin,
+    collectionGid: string,
+  ): Promise<CollectionPreflightTargetV1>;
+  repository: PreflightRepository;
+}>;
+
+export type RunCollectionPreflightResultV1 = Readonly<{
+  scanId: string;
+  preflightRunId: string;
+  policyRevisionId: string;
+  targetType: "COLLECTION";
+  collectionGid: string;
+  collectionHandle?: string;
+  collectionTitle?: string;
+  productGids: readonly string[];
+  outcome: PreflightOutcomeV1;
+  targetCount: number;
+  evaluationCount: number;
+  productsProcessed: number;
+  variantsProcessed: number;
+  persistence: PersistPreflightResultV1;
+}>;
+
+const COLLECTION_GID_PATTERN = /^gid:\/\/shopify\/Collection\/\d+$/;
+const COLLECTION_URL_ID_PATTERN = /\/collections\/(\d+)(?:[/?#]|$)/;
+
+function normalizeCollectionIdentifier(raw: string) {
+  const value = raw.trim();
+  if (!value) return undefined;
+
+  if (COLLECTION_GID_PATTERN.test(value)) return value;
+  if (NUMERIC_ID_PATTERN.test(value)) {
+    return `gid://shopify/Collection/${value}`;
+  }
+
+  const urlMatch = value.match(COLLECTION_URL_ID_PATTERN);
+  if (urlMatch) {
+    return `gid://shopify/Collection/${urlMatch[1]}`;
+  }
+
+  throw new Error(`unsupported collection preflight target: ${raw}`);
+}
+
+export function parseCollectionPreflightTargetGidV1(
+  collectionTargetText: string,
+) {
+  const tokens = collectionTargetText.split(/[\s,]+/).filter(Boolean);
+  if (tokens.length !== 1) {
+    throw new Error("collection preflight requires exactly one collection");
+  }
+
+  const collectionGid = normalizeCollectionIdentifier(tokens[0]);
+  if (!collectionGid) {
+    throw new Error("collection preflight requires a collection target");
+  }
+
+  return collectionGid;
+}
+
+function collectionTargetDefinition(
+  collection: CollectionPreflightTargetV1,
+): PreflightTargetDefinitionV1 {
+  const collectionHandle = collection.collectionHandle?.trim();
+  const collectionTitle = collection.collectionTitle?.trim();
+
+  return Object.freeze({
+    targetType: "COLLECTION" as const,
+    collectionGid: collection.collectionGid,
+    ...(collectionHandle ? { collectionHandle } : {}),
+    ...(collectionTitle ? { collectionTitle } : {}),
+  });
+}
+
+export async function runCollectionPreflightV1<TAdmin>(
+  input: RunCollectionPreflightInputV1<TAdmin>,
+): Promise<RunCollectionPreflightResultV1> {
+  const requestedCollectionGid = parseCollectionPreflightTargetGidV1(
+    input.collectionTargetText,
+  );
+  const revision = await input.loadActiveRevision(input.shopId, input.policyId);
+  if (!revision) {
+    throw new Error(`active policy revision not found: ${input.policyId}`);
+  }
+  if (revision.id !== input.expectedRevisionId) {
+    throw new Error(
+      "active policy revision changed; reload before preflighting",
+    );
+  }
+
+  const observedAt = parseIsoDate(input.now(), "preflight observedAt");
+  const scanId = ensureGeneratedId(input.nextScanId(), "scan id");
+  const preflightRunId = ensureGeneratedId(
+    input.nextPreflightRunId(),
+    "preflight run id",
+  );
+  const [exceptions, catalog, collection] = await Promise.all([
+    input.loadExceptions(input.shopId),
+    input.readCatalog(input.admin),
+    input.readCollectionTarget(input.admin, requestedCollectionGid),
+  ]);
+
+  if (catalog.completeness !== "COMPLETE") {
+    throw new Error("verified catalog reader returned a partial catalog");
+  }
+  if (collection.collectionGid !== requestedCollectionGid) {
+    throw new Error(
+      `preflight collection response ${collection.collectionGid} did not match requested ${requestedCollectionGid}`,
+    );
+  }
+  if (collection.productGids.length === 0) {
+    throw new Error("collection preflight found no products to evaluate");
+  }
+
+  const productGids = Object.freeze(
+    [...collection.productGids].sort((a, b) => a.localeCompare(b)),
+  );
+  const products = selectProducts(catalog, productGids);
+  const variantsProcessed = variantCount(products);
+  const evaluations = evaluatePolicyRevisionV1({
+    revision,
+    products,
+    context: {
+      shopId: input.shopId,
+      observedAt,
+      apiVersion: input.apiVersion,
+      normalizationVersion: NORMALIZATION_VERSION,
+      identifierIndex: catalog.identifierIndex,
+    },
+    exceptions,
+  });
+  const plan = buildPlan({
+    scanId,
+    preflightRunId,
+    shopId: input.shopId,
+    revision,
+    targetDefinition: collectionTargetDefinition(collection),
+    observedAt,
+    createdByActor: input.createdByActor,
+    targets: materializedTargetsFor(products),
+    evaluations,
+  });
+  const persistence = await input.repository.persistPreflightEvidence({
+    scan: {
+      id: scanId,
+      shopId: input.shopId,
+      scanType: "PREFLIGHT",
+      policyRevisionId: revision.id,
+      apiVersion: input.apiVersion,
+      engineVersion: input.engineVersion,
+      normalizationVersion: NORMALIZATION_VERSION,
+      startedAt: observedAt.toISOString(),
+      finishedAt: observedAt.toISOString(),
+      productsExpected: products.length,
+      productsProcessed: products.length,
+      variantsProcessed,
+    },
+    plan,
+  });
+
+  return Object.freeze({
+    scanId,
+    preflightRunId,
+    policyRevisionId: revision.id,
+    targetType: "COLLECTION" as const,
+    collectionGid: collection.collectionGid,
+    ...(collection.collectionHandle
+      ? { collectionHandle: collection.collectionHandle }
+      : {}),
+    ...(collection.collectionTitle
+      ? { collectionTitle: collection.collectionTitle }
+      : {}),
+    productGids,
+    outcome: plan.summary.outcome,
+    targetCount: plan.targets.length,
+    evaluationCount: plan.evaluations.length,
+    productsProcessed: products.length,
+    variantsProcessed,
+    persistence,
+  });
+}

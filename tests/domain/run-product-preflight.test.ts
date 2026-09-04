@@ -1,6 +1,9 @@
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
-import { runProductPreflightV1 } from "../../app/application/run-product-preflight";
+import {
+  runCollectionPreflightV1,
+  runProductPreflightV1,
+} from "../../app/application/run-product-preflight";
 import { normalizeShopifyCatalogV1 } from "../../app/domain/catalog/shopify-normalizer";
 import {
   POLICY_SCHEMA_VERSION,
@@ -214,6 +217,133 @@ test("missing product targets fail before persistence", async () => {
         }),
       ),
     /gid:\/\/shopify\/Product\/999/,
+  );
+
+  assert.equal(repository.input, undefined);
+});
+
+function collectionInputFor(
+  repository: RecordingPreflightRepository,
+  overrides = {},
+) {
+  return {
+    admin: { kind: "admin" },
+    shopId: "shop-1",
+    policyId: "policy-1",
+    expectedRevisionId: "policy-revision-1",
+    collectionTargetText:
+      "https://admin.shopify.com/store/example/collections/5",
+    apiVersion: "2026-07",
+    engineVersion: "test-engine",
+    now: () => "2026-09-04T13:00:00.000Z",
+    nextScanId: () => "scan-collection-preflight-1",
+    nextPreflightRunId: () => "preflight-collection-1",
+    loadActiveRevision: async () => revision(),
+    loadExceptions: async () => [],
+    readCatalog: async () => completeCatalog(),
+    readCollectionTarget: async (
+      _admin: { kind: string },
+      collectionGid: string,
+    ) =>
+      Object.freeze({
+        collectionGid,
+        collectionHandle: "launch",
+        collectionTitle: "Launch",
+        productGids: Object.freeze([
+          "gid://shopify/Product/2",
+          "gid://shopify/Product/1",
+        ]),
+      }),
+    repository,
+    ...overrides,
+  };
+}
+
+test("collection preflight materializes collection membership evidence", async () => {
+  const repository = new RecordingPreflightRepository();
+  const result = await runCollectionPreflightV1(collectionInputFor(repository));
+
+  assert.equal(result.scanId, "scan-collection-preflight-1");
+  assert.equal(result.preflightRunId, "preflight-collection-1");
+  assert.equal(result.targetType, "COLLECTION");
+  assert.equal(result.collectionGid, "gid://shopify/Collection/5");
+  assert.equal(result.collectionHandle, "launch");
+  assert.equal(result.collectionTitle, "Launch");
+  assert.equal(result.productsProcessed, 2);
+  assert.equal(result.variantsProcessed, 2);
+  assert.equal(result.evaluationCount, 2);
+  assert.deepEqual(result.productGids, [
+    "gid://shopify/Product/1",
+    "gid://shopify/Product/2",
+  ]);
+  assert.deepEqual(repository.input?.plan.run.targetDefinition, {
+    targetType: "COLLECTION",
+    collectionGid: "gid://shopify/Collection/5",
+    collectionHandle: "launch",
+    collectionTitle: "Launch",
+  });
+  assert.deepEqual(
+    repository.input?.plan.targets.map((target) => [
+      target.resourceType,
+      target.resourceGid,
+    ]),
+    [
+      ["PRODUCT", "gid://shopify/Product/1"],
+      ["PRODUCT", "gid://shopify/Product/2"],
+      ["VARIANT", "gid://shopify/ProductVariant/11"],
+      ["VARIANT", "gid://shopify/ProductVariant/22"],
+    ],
+  );
+});
+
+test("stale collection preflight page rejects before Shopify reads", async () => {
+  const repository = new RecordingPreflightRepository();
+  let catalogReads = 0;
+  let collectionReads = 0;
+
+  await assert.rejects(
+    () =>
+      runCollectionPreflightV1(
+        collectionInputFor(repository, {
+          expectedRevisionId: "stale-revision",
+          readCatalog: async () => {
+            catalogReads += 1;
+            return completeCatalog();
+          },
+          readCollectionTarget: async () => {
+            collectionReads += 1;
+            return Object.freeze({
+              collectionGid: "gid://shopify/Collection/5",
+              productGids: Object.freeze(["gid://shopify/Product/1"]),
+            });
+          },
+        }),
+      ),
+    /active policy revision changed/,
+  );
+
+  assert.equal(catalogReads, 0);
+  assert.equal(collectionReads, 0);
+  assert.equal(repository.input, undefined);
+});
+
+test("empty collection preflight fails before persistence", async () => {
+  const repository = new RecordingPreflightRepository();
+
+  await assert.rejects(
+    () =>
+      runCollectionPreflightV1(
+        collectionInputFor(repository, {
+          readCollectionTarget: async () =>
+            Object.freeze({
+              collectionGid: "gid://shopify/Collection/5",
+              collectionHandle: "empty",
+              collectionTitle: "Empty",
+              productGids: Object.freeze([]),
+            }),
+        }),
+      ),
+    /no products/,
   );
 
   assert.equal(repository.input, undefined);

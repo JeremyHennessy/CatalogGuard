@@ -3,9 +3,11 @@ import {
   type NormalizedShopifyCatalogV1,
 } from "./shopify-normalizer";
 import {
+  SHOPIFY_COLLECTION_PRODUCTS_QUERY_V1,
   SHOPIFY_PRODUCTS_QUERY_V1,
   SHOPIFY_VARIANTS_QUERY_V1,
   type ShopifyCatalogSourceV1,
+  type ShopifyCollectionProductSourceV1,
   type ShopifyProductSourceV1,
   type ShopifyVariantSourceV1,
 } from "./shopify-source";
@@ -15,9 +17,15 @@ export type ShopifyCatalogVariablesV1 = Readonly<{
   after: string | null;
 }>;
 
+export type ShopifyCollectionProductsVariablesV1 = Readonly<{
+  id: string;
+  first: number;
+  after: string | null;
+}>;
+
 export type ShopifyGraphqlExecutorV1 = (
   query: string,
-  variables: ShopifyCatalogVariablesV1,
+  variables: ShopifyCatalogVariablesV1 | ShopifyCollectionProductsVariablesV1,
 ) => Promise<unknown>;
 
 type PageInfo = Readonly<{
@@ -179,4 +187,171 @@ export async function readVerifiedShopifyCatalogV1(input: {
   }
 
   return catalog;
+}
+
+export type ShopifyCollectionProductTargetV1 = Readonly<{
+  collectionGid: string;
+  collectionHandle: string;
+  collectionTitle: string;
+  productGids: readonly string[];
+}>;
+
+function parseCollectionProductsPage(payload: unknown): Readonly<{
+  collectionGid: string;
+  collectionHandle: string;
+  collectionTitle: string;
+  productGids: readonly string[];
+  pageInfo: PageInfo;
+}> {
+  if (!isObject(payload)) {
+    throw new Error("Shopify GraphQL response is not an object");
+  }
+
+  const errors = graphqlErrors(payload);
+  if (errors.length > 0) {
+    throw new Error(`Shopify GraphQL failed: ${errors.join("; ")}`);
+  }
+
+  if (!isObject(payload.data)) {
+    throw new Error("Shopify GraphQL response returned no data");
+  }
+
+  const collection = payload.data.collection;
+  if (collection === null) {
+    throw new Error("Shopify collection was not found");
+  }
+  if (!isObject(collection)) {
+    throw new Error("Shopify GraphQL response is missing collection data");
+  }
+  if (typeof collection.id !== "string") {
+    throw new Error("Shopify collection id is invalid");
+  }
+  if (typeof collection.handle !== "string") {
+    throw new Error("Shopify collection handle is invalid");
+  }
+  if (typeof collection.title !== "string") {
+    throw new Error("Shopify collection title is invalid");
+  }
+
+  const products = collection.products;
+  if (!isObject(products) || !Array.isArray(products.nodes)) {
+    throw new Error(
+      "Shopify GraphQL response is missing collection product nodes",
+    );
+  }
+  if (!isObject(products.pageInfo)) {
+    throw new Error(
+      "Shopify GraphQL response is missing collection product pageInfo",
+    );
+  }
+
+  const hasNextPage = products.pageInfo.hasNextPage;
+  const endCursor = products.pageInfo.endCursor;
+  if (typeof hasNextPage !== "boolean") {
+    throw new Error("collection products pageInfo.hasNextPage is invalid");
+  }
+  if (endCursor !== null && typeof endCursor !== "string") {
+    throw new Error("collection products pageInfo.endCursor is invalid");
+  }
+
+  return Object.freeze({
+    collectionGid: collection.id,
+    collectionHandle: collection.handle,
+    collectionTitle: collection.title,
+    productGids: Object.freeze(
+      products.nodes.map((node) => {
+        const product = node as ShopifyCollectionProductSourceV1;
+        if (!isObject(product) || typeof product.id !== "string") {
+          throw new Error("collection product node id is invalid");
+        }
+
+        return product.id;
+      }),
+    ),
+    pageInfo: Object.freeze({ hasNextPage, endCursor }),
+  });
+}
+
+export async function readShopifyCollectionProductTargetV1(input: {
+  execute: ShopifyGraphqlExecutorV1;
+  collectionGid: string;
+  pageSize?: number;
+  maxPages?: number;
+}): Promise<ShopifyCollectionProductTargetV1> {
+  const pageSize = input.pageSize ?? 100;
+  const maxPages = input.maxPages ?? 10_000;
+
+  if (!Number.isInteger(pageSize) || pageSize < 1) {
+    throw new Error(
+      "Shopify collection product pageSize must be a positive integer",
+    );
+  }
+  if (!Number.isInteger(maxPages) || maxPages < 1) {
+    throw new Error(
+      "Shopify collection product maxPages must be a positive integer",
+    );
+  }
+
+  const productGids: string[] = [];
+  const seenProductGids = new Set<string>();
+  const seenCursors = new Set<string>();
+  let after: string | null = null;
+  let collectionGid: string | undefined;
+  let collectionHandle: string | undefined;
+  let collectionTitle: string | undefined;
+
+  for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
+    const payload = await input.execute(SHOPIFY_COLLECTION_PRODUCTS_QUERY_V1, {
+      id: input.collectionGid,
+      first: pageSize,
+      after,
+    });
+    const page = parseCollectionProductsPage(payload);
+
+    collectionGid = page.collectionGid;
+    collectionHandle = page.collectionHandle;
+    collectionTitle = page.collectionTitle;
+
+    if (collectionGid !== input.collectionGid) {
+      throw new Error(
+        `Shopify collection response id ${collectionGid} does not match requested ${input.collectionGid}`,
+      );
+    }
+
+    for (const productGid of page.productGids) {
+      if (seenProductGids.has(productGid)) {
+        throw new Error(`collection product repeated GID: ${productGid}`);
+      }
+      seenProductGids.add(productGid);
+      productGids.push(productGid);
+    }
+
+    if (!page.pageInfo.hasNextPage) {
+      return Object.freeze({
+        collectionGid,
+        collectionHandle,
+        collectionTitle,
+        productGids: Object.freeze(productGids),
+      });
+    }
+
+    const nextCursor = page.pageInfo.endCursor;
+    if (!nextCursor) {
+      throw new Error(
+        "collection products hasNextPage=true without an endCursor",
+      );
+    }
+    if (seenCursors.has(nextCursor)) {
+      throw new Error(
+        `collection products pagination repeated cursor ${nextCursor}`,
+      );
+    }
+
+    seenCursors.add(nextCursor);
+    after = nextCursor;
+  }
+
+  throw new Error(
+    `collection products pagination exceeded maxPages=${maxPages}`,
+  );
 }

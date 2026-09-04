@@ -17,11 +17,15 @@ import {
   loadPreflightPolicyChoicesV1,
   loadRecentPreflightRunsV1,
 } from "../services/preflight/preflight-runs.server";
-import { runProductPreflightForShopV1 } from "../services/preflight/product-preflight.server";
+import {
+  runCollectionPreflightForShopV1,
+  runProductPreflightForShopV1,
+} from "../services/preflight/product-preflight.server";
 import { ensureCatalogGuardShopV1 } from "../services/shops/shop-record.server";
 
 const API_VERSION = "2026-07";
 const ENGINE_VERSION = "catalogguard-policy-v1";
+type PreflightTargetMode = "PRODUCT" | "COLLECTION";
 
 async function authenticatedShop(request: Request) {
   const { admin, session } = await authenticate.admin(request);
@@ -79,26 +83,53 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     "expectedRevisionId",
     "Expected policy revision",
   );
-  const productTargetText = requiredFormString(
+  const targetType = requiredFormString(
     form,
-    "productTargets",
-    "Product targets",
+    "targetType",
+    "Preflight target type",
   );
   const { admin, session, shop } = await authenticatedShop(request);
 
   try {
-    const result = await runProductPreflightForShopV1({
+    const commonInput = {
       admin,
       shopId: shop.id,
       policyId,
       expectedRevisionId,
-      productTargetText,
       apiVersion: API_VERSION,
       engineVersion: ENGINE_VERSION,
       createdByActor: session.shop,
       now: () => new Date().toISOString(),
       nextScanId: () => `scan_${randomUUID()}`,
       nextPreflightRunId: () => `preflight_${randomUUID()}`,
+    };
+
+    if (targetType === "COLLECTION") {
+      const collectionTargetText = requiredFormString(
+        form,
+        "collectionTarget",
+        "Collection target",
+      );
+      const result = await runCollectionPreflightForShopV1({
+        ...commonInput,
+        collectionTargetText,
+      });
+
+      return { result };
+    }
+
+    if (targetType !== "PRODUCT") {
+      throw new Error(`unsupported preflight target type: ${targetType}`);
+    }
+
+    const productTargetText = requiredFormString(
+      form,
+      "productTargets",
+      "Product targets",
+    );
+    const result = await runProductPreflightForShopV1({
+      ...commonInput,
+      productTargetText,
     });
 
     return { result };
@@ -120,7 +151,9 @@ export default function CatalogGuardPreflight() {
   const submit = useSubmit();
   const defaultPolicyId = policyChoices[0]?.id ?? "";
   const [selectedPolicyId, setSelectedPolicyId] = useState(defaultPolicyId);
+  const [targetType, setTargetType] = useState<PreflightTargetMode>("PRODUCT");
   const [productTargets, setProductTargets] = useState("");
+  const [collectionTarget, setCollectionTarget] = useState("");
   const selectedPolicy = useMemo(
     () =>
       policyChoices.find((policy) => policy.id === selectedPolicyId) ??
@@ -134,12 +167,21 @@ export default function CatalogGuardPreflight() {
   const isSubmitting = navigation.state !== "idle";
 
   const runPreflight = () => {
-    if (!selectedPolicy || productTargets.trim().length === 0) return;
+    if (!selectedPolicy) return;
+
+    const targets =
+      targetType === "COLLECTION" ? collectionTarget : productTargets;
+    if (targets.trim().length === 0) return;
 
     const form = new FormData();
     form.set("policyId", selectedPolicy.id);
     form.set("expectedRevisionId", selectedPolicy.activeRevisionId);
-    form.set("productTargets", productTargets);
+    form.set("targetType", targetType);
+    if (targetType === "COLLECTION") {
+      form.set("collectionTarget", collectionTarget);
+    } else {
+      form.set("productTargets", productTargets);
+    }
     submit(form, { method: "post" });
   };
 
@@ -147,9 +189,9 @@ export default function CatalogGuardPreflight() {
     <s-page heading="Preflight">
       <s-section heading="Launch evidence">
         <s-paragraph>
-          Persisted preflight evidence for {shopDomain}. Product preflights run
-          the same policy engine against selected Shopify products, then record
-          evidence without writing products or changing current findings.
+          Persisted preflight evidence for {shopDomain}. Preflights run the same
+          policy engine against selected Shopify products, then record evidence
+          without writing products or changing current findings.
         </s-paragraph>
         <s-paragraph>
           Outcomes use the same policy semantics as findings: blocking
@@ -162,10 +204,10 @@ export default function CatalogGuardPreflight() {
         </s-paragraph>
       </s-section>
 
-      <s-section heading="Run product preflight">
+      <s-section heading="Run preflight">
         {policyChoices.length === 0 ? (
           <s-paragraph>
-            Create and activate a policy before running product preflight.
+            Create and activate a policy before running preflight.
           </s-paragraph>
         ) : (
           <div style={{ display: "grid", gap: "1rem", maxWidth: "48rem" }}>
@@ -186,18 +228,50 @@ export default function CatalogGuardPreflight() {
               </select>
             </label>
 
-            <label htmlFor="preflight-product-targets">
-              Product IDs, GIDs, or Admin URLs
-              <textarea
-                id="preflight-product-targets"
-                rows={4}
-                value={productTargets}
-                placeholder="gid://shopify/Product/123, 123, or https://admin.shopify.com/store/example/products/123"
+            <label htmlFor="preflight-target-type">
+              Target type
+              <select
+                id="preflight-target-type"
+                value={targetType}
                 onChange={(event) =>
-                  setProductTargets(event.currentTarget.value)
+                  setTargetType(
+                    event.currentTarget.value === "COLLECTION"
+                      ? "COLLECTION"
+                      : "PRODUCT",
+                  )
                 }
-              />
+              >
+                <option value="PRODUCT">Products</option>
+                <option value="COLLECTION">Collection</option>
+              </select>
             </label>
+
+            {targetType === "COLLECTION" ? (
+              <label htmlFor="preflight-collection-target">
+                Collection ID, GID, or Admin URL
+                <input
+                  id="preflight-collection-target"
+                  value={collectionTarget}
+                  placeholder="gid://shopify/Collection/123, 123, or https://admin.shopify.com/store/example/collections/123"
+                  onChange={(event) =>
+                    setCollectionTarget(event.currentTarget.value)
+                  }
+                />
+              </label>
+            ) : (
+              <label htmlFor="preflight-product-targets">
+                Product IDs, GIDs, or Admin URLs
+                <textarea
+                  id="preflight-product-targets"
+                  rows={4}
+                  value={productTargets}
+                  placeholder="gid://shopify/Product/123, 123, or https://admin.shopify.com/store/example/products/123"
+                  onChange={(event) =>
+                    setProductTargets(event.currentTarget.value)
+                  }
+                />
+              </label>
+            )}
 
             {selectedPolicy ? (
               <s-unordered-list>
@@ -216,9 +290,7 @@ export default function CatalogGuardPreflight() {
             ) : null}
 
             <s-button type="button" variant="primary" onClick={runPreflight}>
-              {isSubmitting
-                ? "Running product preflight"
-                : "Run product preflight"}
+              {isSubmitting ? "Running preflight" : "Run preflight"}
             </s-button>
           </div>
         )}
