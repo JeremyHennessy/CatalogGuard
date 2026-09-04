@@ -5,7 +5,7 @@ This file is the authoritative resume point for CatalogGuard. Repository state, 
 ## Exact state
 
 ```text
-Date: 2026-09-03
+Date: 2026-09-04
 Canonical repository: JeremyHennessy/CatalogGuard
 Immutable main baseline SHA: 1a540cd3ea73b9b03e3830b8b9c14dc02cf0511f
 Phase 1 branch: phase-1/shopify-scaffold
@@ -16,9 +16,10 @@ Phase 2 PR: #12 draft, stacked on Phase 1
 Phase 2 issue: #2 CLOSED — engineering scope complete
 Phase 3 branch: phase-3/baseline-dashboard
 Phase 3 PR: #14 draft, stacked on Phase 2
-Phase 3 issue: #13 OPEN — live baseline acceptance in progress
+Phase 3 issue: #13 OPEN — baseline succeeded; reload/repeated-action acceptance and next UI slice remain
 Phase 3 action-origin code checkpoint: 888d5fe053da1993113f0362044f22d03e4e6cbf
 Phase 3 action-origin Quality Gate: 33802077280 — success
+Phase 3 synchronized handoff before live success: 9d532d58e2efc32123a0b7be4511a1435b19b6d6
 Shopify Admin API: 2026-07 / ApiVersion.July26
 React Router: 7.18.3
 Requested CatalogGuard scopes: read_products only
@@ -28,10 +29,11 @@ Observed CatalogGuard requested scopes: read_products
 Observed CatalogGuard granted scopes: read_products
 Embedded App Home: VERIFIED LIVE
 Authenticated real catalog read: VERIFIED LIVE
+Real Phase 3 baseline: VERIFIED LIVE 2026-09-04
 Production deployment: none verified
 ```
 
-There is **no user-approved merge/checkpoint yet**. Green CI and closed engineering issues are implementation evidence, not permission to merge. `main` remains the immutable baseline until the user explicitly approves a later implementation state.
+There is **no user-approved merge/checkpoint yet**. Green CI, closed engineering issues, and live validation are implementation evidence, not permission to merge. `main` remains the immutable baseline until the user explicitly approves a later implementation state.
 
 ## Phase 1 live acceptance — complete
 
@@ -51,14 +53,14 @@ Repository-green in-code path:
 
 Rule status remains `PASS`, `FAIL`, `NOT_APPLICABLE`, `UNKNOWN`; enforcement remains separate as `COMPLIANT`, `VIOLATION`, `WAIVED`, `INDETERMINATE`, `NOT_APPLICABLE`.
 
-## Phase 3 first slice — implemented
+## Phase 3 first slice — implemented and live baseline verified
 
 ### Overview / onboarding
 
 - Authenticated Shopify `shop { id }` is persisted as the CatalogGuard tenant identity with GID/domain conflict protection.
 - The old Phase 1 10-product demo is replaced by an evidence-backed Overview.
 - Page load reads persisted evidence only and does not run a scan.
-- Before baseline, Overview explicitly shows `No baseline yet`.
+- Before baseline, Overview explicitly showed `No baseline yet`.
 
 ### Development validation policy
 
@@ -69,7 +71,7 @@ The current onboarding policy is explicitly development-only and contains exactl
 
 This is not a merchant production default. The policy has deterministic per-shop identity, is stored as an immutable revision, and persisted-template drift is rejected.
 
-### Baseline action
+### Baseline mutation path
 
 - `Establish dev baseline` is an explicit user action.
 - Existing COMPLETE baseline is checked before scanning.
@@ -77,75 +79,82 @@ This is not a merchant production default. The policy has deterministic per-shop
 - The action invokes the verified Shopify reader and `runShopifyCatalogPolicyScanV1` with `baseline=true`.
 - A deterministic baseline scan ID supports replay/idempotency evidence.
 - Shopify products remain read-only; only CatalogGuard evidence is written.
-- A dedicated `POST /app/baseline` route now owns the baseline mutation path; the Overview index route is read-only.
+- A dedicated `POST /app/baseline` route owns the baseline mutation path; the Overview index route is read-only.
 
-### Persisted Overview after baseline
+### React Router action-origin root cause and fix
 
-Overview is wired to show persisted products/variants evaluated, PASS/FAIL/UNKNOWN/NOT_APPLICABLE counts, open findings, baseline debt, regressions, blocking violations, blocking indeterminate results, waived failures, and current finding evidence summaries.
+Repeated early baseline attempts failed with React Router `Bad Request` before CatalogGuard action execution. The decisive runtime evidence was that failed mutation requests emitted `singleFetchAction` 400s without the Shopify `authenticate.admin()` log that normal app requests produced.
 
-## Live Phase 3 baseline failure investigation — 2026-09-03
+CatalogGuard pins React Router `7.18.3`, whose mutation Origin/CSRF validation runs before route actions. Shopify CLI development places the public tunnel origin in front of a local React Router listener, so the browser public origin can differ from the origin represented by the proxied request URL.
 
-The pre-baseline embedded Overview is verified live and correctly shows `No baseline yet` plus the explicit development policy and action.
+CatalogGuard now uses `react-router.config.ts` to derive `allowedActionOrigins` from the **exact** Shopify public app host supplied by `SHOPIFY_APP_URL`/`HOST` compatibility fallback. Security constraints remain locked:
 
-Repeated clicks of `Establish dev baseline` returned React Router `Error: Bad Request`. The critical runtime evidence is that the failing mutation did **not** produce the Shopify `authenticate.admin()` log that normal app requests produce. Therefore the 400 is emitted before CatalogGuard's route action begins. No baseline was persisted and no scan/finding evidence was modified.
+- no CSRF/origin validation disable;
+- no `*.trycloudflare.com` wildcard;
+- no hard-coded transient tunnel host;
+- only the current configured Shopify app host is allowed;
+- scaffold contract rejects wildcard tunnel origins.
 
-Two earlier dispatch changes were useful negative experiments but did not solve the failure:
+Final root-cause code head: `888d5fe053da1993113f0362044f22d03e4e6cbf`.
 
-1. React Router `<Form>` + hidden `intent` + Shopify `s-button`;
-2. `useSubmit({ intent })`;
-3. dedicated `POST /app/baseline` with no request body.
+Permanent Quality Gate `33802077280` passed locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build. Synchronized handoff head `9d532d58e2efc32123a0b7be4511a1435b19b6d6` also passed Quality Gate `33802280036`.
 
-The same pre-action 400 survived all three shapes. That rules the request body, index-route intent guard, Shopify scope, Prisma baseline logic, and scan engine out as primary causes. Do not resume button/form churn.
+## Live Phase 3 baseline acceptance — verified 2026-09-04
 
-### Evidence-supported root cause: React Router 7.18 action-origin enforcement behind Shopify CLI proxy
+The user pulled/restarted the action-origin checkpoint and established a real baseline successfully from the embedded App Home.
 
-CatalogGuard pins React Router `7.18.3`. In this version, `singleFetchAction()` performs the framework's mutation-origin/CSRF check before route action execution. The check compares the request `Origin` against the origin represented by `request.url`, unless the origin is explicitly included in `allowedActionOrigins`.
+Observed persisted Overview evidence after the click:
 
-Shopify CLI development uses a public app URL/tunnel in front of the local React Router server. Runtime evidence showed both sides simultaneously:
-
-- public App Home/tunnel URL: `https://<generated>.trycloudflare.com`;
-- local React Router listener: `http://localhost:<port>`.
-
-That is the reverse-proxy topology affected by React Router's stricter 7.18 mutation-origin behavior: the browser's public origin can differ from the origin React Router derives from the proxied request. The resulting rejection is a bare 400 from `singleFetchAction()` before CatalogGuard authentication or action code runs, matching all observed failures.
-
-Live confirmation of this diagnosis is still required; it is not yet recorded as a successful baseline.
-
-### Root-cause configuration
-
-CatalogGuard now has `react-router.config.ts` that derives one allowed action host from Shopify's configured public app URL:
-
-```ts
-function configuredActionOrigins(): string[] {
-  const appUrl = process.env.SHOPIFY_APP_URL || process.env.HOST;
-
-  if (!appUrl) return [];
-
-  const parsed = new URL(appUrl);
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-    throw new Error("SHOPIFY_APP_URL must use http or https");
-  }
-
-  return [parsed.host];
-}
-
-export default {
-  allowedActionOrigins: configuredActionOrigins(),
-};
+```text
+Baseline completed: 2026-09-04 07:53:27 local display time
+Products evaluated: 17
+Variants evaluated: 26
+PASS evaluations: 6
+FAIL evaluations: 21
+UNKNOWN evaluations: 0
+NOT_APPLICABLE evaluations: 25
+Open findings: 21
+Baseline debt: 21
+New/reopened regressions: 0
+Blocking violations: 21
+Blocking indeterminate: 0
+Waived failures: 0
 ```
 
-Security boundary:
+The evaluation total is internally complete for the development policy: `6 + 21 + 0 + 25 = 52`, exactly `26 variants × 2 rules`.
 
-- no blanket CSRF disable;
-- no `*.trycloudflare.com` wildcard;
-- no hard-coded transient tunnel hostname;
-- only the exact app host Shopify supplies for the running environment is trusted;
-- production therefore remains bound to the configured production `SHOPIFY_APP_URL` rather than a development tunnel wildcard.
+The displayed open findings were `CG-SKU-001` failures classified as `BASELINE_DEBT`, `CRITICAL`, blocking, `VIOLATION`, with message `SKU is required.` This verifies the central lifecycle requirement: failures present at the explicit baseline are debt, not new regressions.
 
-The scaffold contract now protects that boundary and explicitly rejects wildcard `trycloudflare.com` origins.
+This live result confirms:
 
-Final root-cause code head after removing the temporary exact-formatter workflow: `888d5fe053da1993113f0362044f22d03e4e6cbf`.
+- React Router action-origin configuration allows the legitimate Shopify tunnel mutation;
+- CatalogGuard action authentication executes;
+- exhaustive catalog read completed for 17 products / 26 variants;
+- immutable development policy evaluated all expected rule/resource combinations;
+- transactional scan/evaluation/finding persistence completed;
+- Overview reads and displays the persisted baseline/finding evidence;
+- UNKNOWN remained distinct and was zero for this fixture scan;
+- no Shopify product write scope or mutation was introduced.
 
-Permanent Quality Gate `33802077280` passed locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build.
+## Phase 3 acceptance still open
+
+Two behavioral checks remain before Issue #13 should be closed:
+
+1. reload/refresh the Overview and verify the same persisted baseline/counts remain without a new scan;
+2. exercise the repeated-baseline action guard and prove it cannot create a second baseline.
+
+The repeated-baseline guard also needs a dedicated application-level test rather than relying only on persistence idempotency tests.
+
+## Next bounded Phase 3 slice
+
+1. extract/test baseline establishment orchestration so an existing COMPLETE baseline exits before policy/catalog scan execution;
+2. add a full Findings page rather than truncating the Overview at 10 findings;
+3. add per-finding detail/history using persisted `Finding`, latest `Evaluation`, and `FindingEvent` evidence;
+4. enforce shop ownership on finding detail lookups;
+5. keep the Overview concise and link to Findings;
+6. continue to preserve raw immutable resource identities even when later adding merchant-friendly labels/Shopify links.
+
+After this slice: immutable merchant policy editing through new revisions, exact exception create/revoke UI, preflight persistence/UI, webhook/incremental refresh paired with reconciliation, and evaluate Shopify Bulk Operations before production large-catalog scale.
 
 ## Repository-green checkpoints
 
@@ -155,30 +164,13 @@ These are evidence points, not user approvals:
 - Phase 2 completion handoff: `c65eb5dfc8b84f6dc190679ee56d50033d13b308` / `33793827908`
 - Phase 3 first slice: `da9597471b166569e44a8ca8d35fd9dbd61791b4` / `33795979049`
 - Phase 3 synchronized handoff: `c9bbae3feb85a0a2dacc82a93cb6e5a456c45476` / `33796199258`
-- Phase 3 first submit-boundary experiment: `06be5203eb21afd9712c0f53f3ec7dd44a459302` / `33797199974`
 - Phase 3 dedicated baseline route: `667de2a032433a6f5a0ae6226be7ac764c6ec86c` / `33798229165`
 - Phase 3 React Router exact action-origin configuration: `888d5fe053da1993113f0362044f22d03e4e6cbf` / `33802077280`
-
-## Phase 3 live acceptance still required
-
-1. Pull the final Phase 3 action-origin checkpoint locally while preserving the linked Shopify development config.
-2. Restart `shopify app dev` so `react-router.config.ts` is reloaded with the new Shopify-supplied public app URL.
-3. Verify `No baseline yet` still renders.
-4. Click `Establish dev baseline` once.
-5. First diagnostic criterion: the POST must now reach CatalogGuard's action and emit Shopify `Authenticating admin request` logging. If it does not, stop and investigate config/environment visibility rather than changing the button/route again.
-6. Verify one real COMPLETE baseline is persisted.
-7. Verify current failures become `BASELINE_DEBT`, not regressions.
-8. Verify product/variant/evaluation/finding counts appear on Overview.
-9. Refresh and verify the persisted state remains without silently rerunning the scan.
-10. Verify repeated baseline action cannot create a second baseline.
-11. Preserve any UNKNOWN / INDETERMINATE evidence distinctly.
-
-After live baseline acceptance: add Findings drill-down/history, immutable merchant policy editing through new revisions, exact exception create/revoke UI, preflight persistence/UI, webhook/incremental refresh paired with reconciliation, and evaluate Shopify Bulk Operations before production large-catalog scale.
+- Phase 3 root-cause synchronized handoff: `9d532d58e2efc32123a0b7be4511a1435b19b6d6` / `33802280036`
 
 ## Other unresolved items
 
 - No production host or PostgreSQL deployment is verified.
-- No live Phase 3 baseline has yet completed successfully.
 - No merchant-facing policy editor, finding-detail/history screen, waiver UI, or preflight UI exists yet.
 - No webhook/incremental refresh runtime is wired to the scan service yet.
 - The page reader is correct for current validation; Shopify Bulk Operations should be evaluated before production large-catalog scale.
