@@ -52,13 +52,15 @@ function normalizeOptional(value: string | undefined) {
   return trimmed ? trimmed : undefined;
 }
 
-function controlledRuleState(revision: PolicyRevisionInputV1) {
-  return revision.rules.map((rule) => ({
-    ruleCode: rule.ruleCode,
-    ruleVersion: rule.ruleVersion,
-    enabled: rule.enabled,
-    severity: rule.severity,
-    blocking: rule.blocking,
+function materialRuleState(revision: ValidatedPolicyRevisionV1) {
+  return revision.rules.map((entry) => ({
+    ruleCode: entry.rule.ruleCode,
+    ruleVersion: entry.rule.ruleVersion,
+    enabled: entry.rule.enabled,
+    severity: entry.rule.severity,
+    blocking: entry.rule.blocking,
+    config: entry.rule.config,
+    scope: entry.rule.scope,
   }));
 }
 
@@ -84,25 +86,26 @@ export async function saveMerchantPolicyRevisionV1(
     throw new Error("active policy workspace is internally inconsistent");
   }
 
+  const registry = createBuiltinRuleRegistry();
+  const currentRevision = validatePolicyRevisionV1(
+    registry,
+    workspace.activeRevision,
+  );
   const nextInput = buildNextPolicyRevisionInputV1({
     current: workspace.activeRevision,
     createdAt: input.createdAt,
     edits: input.edits,
   });
+  const revision = validatePolicyRevisionV1(registry, nextInput);
   const rulesChanged =
-    JSON.stringify(controlledRuleState(workspace.activeRevision)) !==
-    JSON.stringify(controlledRuleState(nextInput));
+    JSON.stringify(materialRuleState(currentRevision)) !==
+    JSON.stringify(materialRuleState(revision));
   const metadataChanged =
     workspace.name !== name || workspace.description !== description;
 
   if (!rulesChanged && !metadataChanged) {
     throw new Error("policy edit must contain at least one material change");
   }
-
-  const revision = validatePolicyRevisionV1(
-    createBuiltinRuleRegistry(),
-    nextInput,
-  );
 
   await dependencies.appendAndActivate({
     shopId: input.shopId,
