@@ -210,7 +210,7 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 
 **Reason:** Product sets and collection membership can change after launch review. Historical preflight evidence must remain reproducible without being reinterpreted through the current catalog or a later policy revision.
 
-**Status:** Active. Live preflight execution is not yet wired to merchant run actions; PREFLIGHT scans also do not update current Finding lifecycle until that product semantic is explicitly accepted.
+**Status:** Active. Merchant product and collection preflight execution is wired to evidence-only run actions; PREFLIGHT scans do not update current Finding lifecycle until that product semantic is explicitly accepted.
 
 
 ## D-022 — Product preflight is evidence-only in V1
@@ -221,4 +221,14 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 
 **Reason:** Launch review should answer whether the selected target passes the current policy now without changing the global regression/current-state dashboard. Full reconciliation remains the explicit merchant action that updates current findings.
 
-**Status:** Active for product preflight. Collection preflight, CSV preflight, and future publish-blocking semantics remain separate decisions.
+**Status:** Active for product preflight. Collection preflight follows the same evidence-only boundary under D-023. CSV preflight and future publish-blocking semantics remain separate decisions.
+
+## D-023 — Collection preflight materializes live membership evidence
+
+**Date:** 2026-09-04
+
+**Decision:** Merchant-triggered collection preflight reads live collection product membership through Shopify Admin GraphQL, evaluates those materialized products against the exact active policy revision using complete catalog context, and persists a `COLLECTION` preflight run with exact product/variant target fingerprints. The path remains evidence-only and does not mutate current findings.
+
+**Reason:** Collection membership can change after a launch review. Historical preflight evidence must preserve exactly which products and variants were evaluated without being reinterpreted through current collection membership, and the implementation should keep V1 read-only with no scopes beyond `read_products`.
+
+**Status:** Active. Live Shopify acceptance and large-catalog Bulk Operations optimization remain pending.
