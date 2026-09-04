@@ -11,6 +11,11 @@ import {
   useLoaderData,
   useSubmit,
 } from "react-router";
+import {
+  POLICY_SCOPE_STATUSES_V1,
+  policyRuleEditorSchemaV1,
+  type PolicyRuleEditorFieldV1,
+} from "../domain/policy/editor-schema";
 import type { RuleSeverity } from "../domain/rules/contracts";
 import { authenticate } from "../shopify.server";
 import {
@@ -26,6 +31,17 @@ const SEVERITIES: readonly RuleSeverity[] = [
   "ERROR",
   "CRITICAL",
 ];
+
+type JsonObject = Record<string, unknown>;
+type EditableRule = {
+  ruleCode: string;
+  ruleVersion: number;
+  enabled: boolean;
+  severity: RuleSeverity;
+  blocking: boolean;
+  config: JsonObject;
+  scope: JsonObject;
+};
 
 async function authenticatedShop(request: Request) {
   const { admin, session } = await authenticate.admin(request);
@@ -49,6 +65,17 @@ function requiredFormString(form: FormData, key: string) {
 function optionalFormString(form: FormData, key: string) {
   const value = form.get(key);
   return typeof value === "string" ? value : undefined;
+}
+
+function requireJsonObject(value: unknown, label: string): JsonObject {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  return value as JsonObject;
+}
+
+function parseJsonObject(value: string, label: string): JsonObject {
+  return requireJsonObject(JSON.parse(value) as unknown, label);
 }
 
 function parseEdits(value: string) {
@@ -79,6 +106,8 @@ function parseEdits(value: string) {
       enabled: row.enabled,
       severity: row.severity as RuleSeverity,
       blocking: row.blocking,
+      config: requireJsonObject(row.config, `${row.ruleCode} config`),
+      scope: requireJsonObject(row.scope, `${row.ruleCode} scope`),
     };
   });
 }
@@ -127,6 +156,207 @@ function displayDate(value: string) {
   return new Date(value).toLocaleString();
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? value.join(", ")
+    : "";
+}
+
+function parseStringList(value: string) {
+  const values = value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return [...new Set(values)];
+}
+
+function withField(object: JsonObject, key: string, value: unknown) {
+  const next = { ...object };
+  if (
+    value === undefined ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  ) {
+    delete next[key];
+  } else {
+    next[key] = value;
+  }
+  return next;
+}
+
+function ConfigField(input: {
+  field: PolicyRuleEditorFieldV1;
+  config: JsonObject;
+  onChange: (next: JsonObject) => void;
+}) {
+  const { field, config, onChange } = input;
+  const value = config[field.key];
+
+  if (field.kind === "ENUM") {
+    return (
+      <label>
+        {field.label}{" "}
+        <select
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) =>
+            onChange(withField(config, field.key, event.currentTarget.value))
+          }
+        >
+          {field.values.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  if (field.kind === "DECIMAL") {
+    return (
+      <label>
+        {field.label}{" "}
+        <input
+          inputMode="decimal"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) =>
+            onChange(withField(config, field.key, event.currentTarget.value))
+          }
+        />
+      </label>
+    );
+  }
+
+  if (field.kind === "POSITIVE_INTEGER") {
+    return (
+      <label>
+        {field.label}{" "}
+        <input
+          type="number"
+          min="1"
+          step="1"
+          value={typeof value === "number" ? String(value) : ""}
+          onChange={(event) => {
+            const raw = event.currentTarget.value;
+            onChange(
+              withField(config, field.key, raw === "" ? undefined : Number(raw)),
+            );
+          }}
+        />
+      </label>
+    );
+  }
+
+  return (
+    <label>
+      {field.label}
+      {field.optional ? " (optional)" : ""}
+      <br />
+      <textarea
+        value={stringList(value)}
+        onChange={(event) =>
+          onChange(
+            withField(
+              config,
+              field.key,
+              parseStringList(event.currentTarget.value),
+            ),
+          )
+        }
+      />
+      <br />
+      <small>Comma or line separated; exact matching.</small>
+    </label>
+  );
+}
+
+function ScopeEditor(input: {
+  scope: JsonObject;
+  onChange: (next: JsonObject) => void;
+}) {
+  const { scope, onChange } = input;
+  const statuses = Array.isArray(scope.statuses)
+    ? scope.statuses.filter((value): value is string => typeof value === "string")
+    : [];
+
+  const setStringList = (key: string, value: string) =>
+    onChange(withField(scope, key, parseStringList(value)));
+
+  return (
+    <div>
+      <strong>Scope</strong>
+      <div>
+        Product status:{" "}
+        {POLICY_SCOPE_STATUSES_V1.map((status) => (
+          <label key={status}>
+            <input
+              type="checkbox"
+              checked={statuses.includes(status)}
+              onChange={(event) => {
+                const next = event.currentTarget.checked
+                  ? [...statuses, status]
+                  : statuses.filter((value) => value !== status);
+                onChange(withField(scope, "statuses", next));
+              }}
+            />{" "}
+            {status}{" "}
+          </label>
+        ))}
+      </div>
+      <small>No statuses selected means all product statuses.</small>
+      <div>
+        <label>
+          Vendors (optional)
+          <br />
+          <textarea
+            value={stringList(scope.vendors)}
+            onChange={(event) =>
+              setStringList("vendors", event.currentTarget.value)
+            }
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Product types (optional)
+          <br />
+          <textarea
+            value={stringList(scope.productTypes)}
+            onChange={(event) =>
+              setStringList("productTypes", event.currentTarget.value)
+            }
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Any tag (optional)
+          <br />
+          <textarea
+            value={stringList(scope.tagsAny)}
+            onChange={(event) =>
+              setStringList("tagsAny", event.currentTarget.value)
+            }
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          All tags (optional)
+          <br />
+          <textarea
+            value={stringList(scope.tagsAll)}
+            onChange={(event) =>
+              setStringList("tagsAll", event.currentTarget.value)
+            }
+          />
+        </label>
+      </div>
+      <small>Scope values use deterministic exact matching.</small>
+    </div>
+  );
+}
+
 export default function CatalogGuardPolicyWorkspace() {
   const { policy, shopDomain } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -134,17 +364,24 @@ export default function CatalogGuardPolicyWorkspace() {
   const [name, setName] = useState(policy.name);
   const [description, setDescription] = useState(policy.description ?? "");
   const [changeSummary, setChangeSummary] = useState("");
-  const [rules, setRules] = useState(
+  const [rules, setRules] = useState<EditableRule[]>(
     policy.activeRevision?.rules.map((rule) => ({
       ruleCode: rule.ruleCode,
       ruleVersion: rule.ruleVersion,
       enabled: rule.enabled,
       severity: rule.severity,
       blocking: rule.blocking,
-      configJson: rule.configJson,
-      scopeJson: rule.scopeJson,
+      config: parseJsonObject(rule.configJson, `${rule.ruleCode} config`),
+      scope: parseJsonObject(rule.scopeJson, `${rule.ruleCode} scope`),
     })) ?? [],
   );
+
+  const updateRule = (index: number, update: Partial<EditableRule>) =>
+    setRules((current) =>
+      current.map((rule, itemIndex) =>
+        itemIndex === index ? { ...rule, ...update } : rule,
+      ),
+    );
 
   const save = () => {
     if (!policy.activeRevisionId) return;
@@ -153,18 +390,7 @@ export default function CatalogGuardPolicyWorkspace() {
     form.set("name", name);
     form.set("description", description);
     form.set("changeSummary", changeSummary);
-    form.set(
-      "edits",
-      JSON.stringify(
-        rules.map((rule) => ({
-          ruleCode: rule.ruleCode,
-          ruleVersion: rule.ruleVersion,
-          enabled: rule.enabled,
-          severity: rule.severity,
-          blocking: rule.blocking,
-        })),
-      ),
-    );
+    form.set("edits", JSON.stringify(rules));
     submit(form, { method: "post" });
   };
 
@@ -234,81 +460,85 @@ export default function CatalogGuardPolicyWorkspace() {
 
           <s-section heading={`Rule controls (${rules.length})`}>
             <s-paragraph>
-              This first editor intentionally changes only enabled state,
-              severity, and blocking disposition. Rule config and scope remain
-              exactly as stored until the deterministic config/scope builder is
-              added.
+              Rule parameters and scope are edited through constrained controls.
+              The server still validates every built-in rule schema and scope
+              before a new revision can become active. Arbitrary code is never
+              accepted.
             </s-paragraph>
-            {rules.map((rule, index) => (
-              <div key={`${rule.ruleCode}@${rule.ruleVersion}`}>
-                <strong>
-                  {rule.ruleCode}@{rule.ruleVersion}
-                </strong>{" "}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={rule.enabled}
-                    onChange={(event) =>
-                      setRules((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, enabled: event.currentTarget.checked }
-                            : item,
-                        ),
-                      )
-                    }
-                  />{" "}
-                  enabled
-                </label>{" "}
-                <label>
-                  severity{" "}
-                  <select
-                    value={rule.severity}
-                    onChange={(event) =>
-                      setRules((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                severity: event.currentTarget
-                                  .value as RuleSeverity,
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                  >
-                    {SEVERITIES.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </label>{" "}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={rule.blocking}
-                    onChange={(event) =>
-                      setRules((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, blocking: event.currentTarget.checked }
-                            : item,
-                        ),
-                      )
-                    }
-                  />{" "}
-                  blocking
-                </label>
-                <div>
-                  <small>Config: {rule.configJson}</small>
+            {rules.map((rule, index) => {
+              const editor = policyRuleEditorSchemaV1(rule.ruleCode);
+              return (
+                <div key={`${rule.ruleCode}@${rule.ruleVersion}`}>
+                  <hr />
+                  <strong>
+                    {editor.title} — {rule.ruleCode}@{rule.ruleVersion}
+                  </strong>{" "}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={rule.enabled}
+                      onChange={(event) =>
+                        updateRule(index, {
+                          enabled: event.currentTarget.checked,
+                        })
+                      }
+                    />{" "}
+                    enabled
+                  </label>{" "}
+                  <label>
+                    severity{" "}
+                    <select
+                      value={rule.severity}
+                      onChange={(event) =>
+                        updateRule(index, {
+                          severity: event.currentTarget.value as RuleSeverity,
+                        })
+                      }
+                    >
+                      {SEVERITIES.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </label>{" "}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={rule.blocking}
+                      onChange={(event) =>
+                        updateRule(index, {
+                          blocking: event.currentTarget.checked,
+                        })
+                      }
+                    />{" "}
+                    blocking
+                  </label>
+                  <div>
+                    <strong>Rule parameters</strong>
+                    {editor.fields.length === 0 ? (
+                      <div>
+                        <small>No configurable parameters for this rule.</small>
+                      </div>
+                    ) : (
+                      editor.fields.map((field) => (
+                        <div key={field.key}>
+                          <ConfigField
+                            field={field}
+                            config={rule.config}
+                            onChange={(config) => updateRule(index, { config })}
+                          />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <ScopeEditor
+                    scope={rule.scope}
+                    onChange={(scope) => updateRule(index, { scope })}
+                  />
                 </div>
-                <div>
-                  <small>Scope: {rule.scopeJson}</small>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             <s-button type="button" variant="primary" onClick={save}>
               Save as new revision
             </s-button>
