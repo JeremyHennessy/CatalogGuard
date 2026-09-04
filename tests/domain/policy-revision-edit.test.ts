@@ -8,11 +8,12 @@ import { devValidationPolicyRevisionInputV1 } from "../../app/domain/policy/dev-
 
 const CREATED_AT = "2026-09-04T12:00:00.000Z";
 
-test("next policy revision preserves config/scope and changes only controlled fields", () => {
+test("next policy revision changes controlled fields, config, and scope without mutating current revision", () => {
   const current = devValidationPolicyRevisionInputV1({
     shopId: "shop_a",
     createdAt: "2026-09-04T10:00:00.000Z",
   });
+  const currentSnapshot = JSON.parse(JSON.stringify(current));
 
   const next = buildNextPolicyRevisionInputV1({
     current,
@@ -24,6 +25,17 @@ test("next policy revision preserves config/scope and changes only controlled fi
         enabled: false,
         severity: "WARNING",
         blocking: false,
+        config: {},
+        scope: { statuses: ["ACTIVE", "DRAFT"] },
+      },
+      {
+        ruleCode: "CG-SKU-002",
+        ruleVersion: 1,
+        enabled: true,
+        severity: "CRITICAL",
+        blocking: true,
+        config: { normalization: "TRIM" },
+        scope: { statuses: ["ACTIVE"] },
       },
     ],
   });
@@ -34,17 +46,17 @@ test("next policy revision preserves config/scope and changes only controlled fi
   assert.equal(next.policyId, current.policyId);
   assert.equal(next.rules.length, current.rules.length);
 
-  const requiredBefore = current.rules[0];
   const requiredAfter = next.rules[0];
   assert.equal(requiredAfter.enabled, false);
   assert.equal(requiredAfter.severity, "WARNING");
   assert.equal(requiredAfter.blocking, false);
-  assert.deepEqual(requiredAfter.config, requiredBefore.config);
-  assert.deepEqual(requiredAfter.scope, requiredBefore.scope);
+  assert.deepEqual(requiredAfter.config, {});
+  assert.deepEqual(requiredAfter.scope, { statuses: ["ACTIVE", "DRAFT"] });
 
-  const uniqueBefore = current.rules[1];
   const uniqueAfter = next.rules[1];
-  assert.deepEqual(uniqueAfter, uniqueBefore);
+  assert.deepEqual(uniqueAfter.config, { normalization: "TRIM" });
+  assert.deepEqual(uniqueAfter.scope, { statuses: ["ACTIVE"] });
+  assert.deepEqual(current, currentSnapshot);
 });
 
 test("policy revision edit rejects duplicate or unknown rule targets", () => {
@@ -58,6 +70,8 @@ test("policy revision edit rejects duplicate or unknown rule targets", () => {
     enabled: true,
     severity: "CRITICAL" as const,
     blocking: true,
+    config: {},
+    scope: { statuses: ["ACTIVE"] },
   };
 
   assert.throws(
