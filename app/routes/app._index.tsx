@@ -107,9 +107,9 @@ export default function CatalogGuardOverview() {
                 Waived failures: {overview.counts.waived}
               </s-list-item>
             </s-unordered-list>
-            <p>
-              <a href="/app/findings">View all open findings</a>
-            </p>
+            <s-paragraph>
+              <s-link href="/app/findings">View all open findings</s-link>
+            </s-paragraph>
           </s-section>
 
           <s-section
@@ -130,9 +130,11 @@ export default function CatalogGuardOverview() {
                       : " / non-blocking"} — {finding.enforcement} —{" "}
                     {finding.message} — resource{" "}
                     {finding.subresourceGid ?? finding.resourceGid} —{" "}
-                    <a href={`/app/finding/${encodeURIComponent(finding.id)}`}>
+                    <s-link
+                      href={`/app/finding/${encodeURIComponent(finding.id)}`}
+                    >
                       View evidence history
-                    </a>
+                    </s-link>
                   </s-list-item>
                 ))}
               </s-unordered-list>
