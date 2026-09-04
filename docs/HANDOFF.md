@@ -1,6 +1,6 @@
 # Current Handoff
 
-This file is the authoritative resume point for CatalogGuard. Repository state, CI, and live Shopify evidence take precedence over conversation memory.
+This file is the authoritative resume point for CatalogGuard. Repository state, CI, live Shopify evidence, and current official Shopify framework guidance take precedence over conversation memory.
 
 ## Exact state
 
@@ -13,8 +13,8 @@ Phase 2: issue #2 CLOSED / PR #12 draft stacked on Phase 1
 Phase 3 branch: phase-3/baseline-dashboard
 Phase 3 issue: #13 OPEN
 Phase 3 PR: #14 draft stacked on Phase 2
-Phase 3 latest green code head: 5b93c555fb981f6ab7d244f760bbecd01654a66e
-Phase 3 latest Quality Gate: 33866964811 — success
+Phase 3 latest green clean code head: 68a69539e0304bb20de9435f54393f5054a1e00c
+Phase 3 latest Quality Gate: 33868940433 — success
 Shopify Admin API: 2026-07 / ApiVersion.July26
 React Router: 7.18.3
 Requested/granted Shopify scopes: read_products only
@@ -23,6 +23,7 @@ CatalogGuard installation handle: catalogguard-11
 Embedded App Home: VERIFIED LIVE
 Authenticated real catalog read: VERIFIED LIVE
 Real Phase 3 baseline: VERIFIED LIVE 2026-09-04
+Persisted baseline after restart/refresh: VERIFIED LIVE 2026-09-04
 Production deployment: none verified
 ```
 
@@ -46,13 +47,13 @@ Repository-green in-code path:
 
 Rule status remains `PASS`, `FAIL`, `NOT_APPLICABLE`, `UNKNOWN`; enforcement remains separate as `COMPLIANT`, `VIOLATION`, `WAIVED`, `INDETERMINATE`, `NOT_APPLICABLE`.
 
-## React Router mutation-origin root cause — resolved
+## React Router mutation-origin root cause — resolved live
 
 Repeated early baseline attempts failed with React Router `Bad Request` before CatalogGuard action execution. The same pre-action 400 survived three dispatch shapes, including a bodyless dedicated action route. Normal App Home requests emitted Shopify `authenticate.admin()` logging while failed mutations did not.
 
 CatalogGuard pins React Router `7.18.3`, whose mutation Origin/CSRF validation runs before route actions. Shopify CLI development places the public tunnel origin in front of a local React Router listener, so the browser public origin can differ from the origin represented by the proxied request URL.
 
-CatalogGuard now derives `allowedActionOrigins` from the **exact** Shopify public app host supplied by `SHOPIFY_APP_URL`/`HOST` compatibility fallback. Security constraints remain locked:
+CatalogGuard derives `allowedActionOrigins` from the **exact** Shopify public app host supplied by `SHOPIFY_APP_URL`/`HOST` compatibility fallback. Security constraints remain locked:
 
 - no CSRF/origin validation disable;
 - no `*.trycloudflare.com` wildcard;
@@ -60,7 +61,7 @@ CatalogGuard now derives `allowedActionOrigins` from the **exact** Shopify publi
 - only the current configured Shopify app host is allowed;
 - scaffold contract rejects wildcard tunnel origins.
 
-Root-cause code head `888d5fe053da1993113f0362044f22d03e4e6cbf` passed Quality Gate `33802077280`. The fix was then verified by a successful live baseline mutation.
+Root-cause code head `888d5fe053da1993113f0362044f22d03e4e6cbf` passed Quality Gate `33802077280`. The fix was verified by the successful live baseline mutation.
 
 ## Live Phase 3 baseline — verified 2026-09-04
 
@@ -88,13 +89,13 @@ The evaluation total reconciles exactly: `6 + 21 + 0 + 25 = 52 = 26 variants × 
 
 The observed open findings are `CG-SKU-001` technical FAILs classified `BASELINE_DEBT`, `CRITICAL`, blocking, `VIOLATION`, message `SKU is required.` This verifies that failures present at the explicit baseline are debt rather than regressions.
 
-This live result confirms authenticated action execution, exhaustive 17-product/26-variant read, complete two-rule evaluation, transactional evidence persistence, and persisted Overview rendering. UNKNOWN remained explicit and was zero for this fixture scan.
+The user subsequently pulled/restarted the next Phase 3 build and the Overview still showed the **same baseline timestamp and exact 17/26/6/21/0/25 plus 21-debt counts**. This verifies that Overview reload/restart reads persisted evidence rather than silently creating another scan.
 
 ## Repeated-baseline guard — repository verified
 
-Baseline establishment has been extracted into `establishDevBaselineV1` so the route remains a thin authenticated adapter.
+Baseline establishment is extracted into `establishDevBaselineV1` so the route remains a thin authenticated adapter.
 
-The application service now proves two separate paths:
+The application service proves two separate paths:
 
 1. when a COMPLETE baseline already exists, it returns `ALREADY_ESTABLISHED` **before** policy creation/loading, exception loading, or Shopify scan execution;
 2. when no baseline exists, it creates/loads the dev policy, loads exact exceptions, uses the deterministic baseline scan identity, and executes exactly one baseline scan.
@@ -103,32 +104,52 @@ Dedicated tests cover both paths. This removes reliance on persistence idempoten
 
 ## Findings evidence surface — repository verified
 
-The first proper Findings surface is now implemented:
+The first proper Findings surface is implemented:
 
 - `/app/findings` reads persisted open findings without rescanning Shopify;
 - list query is shop-scoped, ordered deterministically, capped at 250, and explicitly reports truncation rather than pretending the list is exhaustive;
 - `/app/finding/:findingId` uses `id + shopId` lookup to prevent cross-shop evidence access;
 - detail exposes current finding state, immutable resource identity, latest evaluation, scan/policy/rule identity, observed/expected/evidence JSON when present, and ordered `FindingEvent` history;
 - related exception evidence is shown when present;
-- Overview remains concise, labels its ten records as **Recent open findings**, links to the full Findings list, and links each preview finding to its evidence history;
+- Overview labels its ten records **Recent open findings** and links to the full Findings list and evidence detail;
 - Shopify products remain read-only and no scope beyond `read_products` was added.
 
-Combined guard + Findings final code head:
+The original Findings code checkpoint `5b93c555fb981f6ab7d244f760bbecd01654a66e` passed Quality Gate `33866964811`.
 
-`5b93c555fb981f6ab7d244f760bbecd01654a66e`
+## Embedded Findings navigation defect — root cause identified and fixed
 
-Permanent Quality Gate `33866964811` — **success**. Locked install, formatting, lint, TypeScript, all scaffold/domain/persistence tests, Prisma validation, clean migration deployment, and production build passed. Temporary formatting workflows were removed before this final gate.
+Live acceptance of the first Findings build exposed a navigation-only defect: Overview persisted and rendered correctly, but clicking **View all open findings** or **View evidence history** produced a blank embedded page.
+
+The routes/loaders were not changed for this fix. Repository review found all internal Findings navigation used raw HTML `<a>` anchors. Shopify's current React Router template explicitly warns that embedded apps must preserve the session through embedded-aware navigation: use React Router/Polaris navigation and **do not use `<a>`**. The same current template demonstrates internal navigation with `<s-link href="/app/additional">`.
+
+CatalogGuard therefore changed only the embedded navigation boundary:
+
+- Overview `/app/findings` link: raw `<a>` -> Shopify `<s-link>`;
+- Overview finding-detail links: raw `<a>` -> Shopify `<s-link>`;
+- Findings back-to-Overview link: raw `<a>` -> Shopify `<s-link>`;
+- Findings detail links: raw `<a>` -> Shopify `<s-link>`;
+- Finding-detail back link: raw `<a>` -> Shopify `<s-link>`;
+- scaffold contract now rejects raw `<a>` elements across these internal Findings routes and asserts the required Shopify links.
+
+No loader, Prisma query, shop-scope guard, finding/evaluation/event model, Shopify scope, or write behavior changed.
+
+Final clean embedded-navigation code head after removing temporary formatters:
+
+`68a69539e0304bb20de9435f54393f5054a1e00c`
+
+Permanent Quality Gate `33868940433` — **success**. Locked install, formatting, lint, TypeScript, all scaffold/domain/persistence tests, Prisma validation, clean migration deployment, and production build passed.
 
 ## Phase 3 live acceptance still open
 
-Before closing Issue #13, verify the current local app after pulling the latest branch:
+One live UI pass remains before Issue #13 should be closed:
 
-1. reload/refresh Overview and confirm the same persisted baseline/counts remain without a new scan;
-2. open **View all open findings** and verify all 21 current findings are represented;
-3. open at least one finding detail and verify latest evaluation/history render from persisted evidence;
-4. confirm navigation back to Findings/Overview works.
+1. pull/restart head `68a69539e0304bb20de9435f54393f5054a1e00c` (or later synchronized docs head);
+2. verify Overview still shows the persisted 2026-09-04 07:53:27 baseline and 17 products / 26 variants / 21 baseline-debt findings;
+3. open **View all open findings** and verify the Findings page renders 21 of 21 current findings;
+4. open at least one **View evidence history** link and verify finding status, latest Evaluation, immutable identifiers, and FindingEvent history render;
+5. verify Shopify-link navigation back to Findings and Overview works.
 
-The repeated-baseline guard is now covered directly at application level and no longer requires a second Shopify scan to prove its behavior. A live mutation can still be exercised later if needed, but it must not be implemented as another test-only UI control.
+If those pass, close Issue #13 and proceed to merchant-facing immutable policy revisions and exact exception/waiver management.
 
 ## Next bounded Phase 3 work after live Findings acceptance
 
@@ -149,6 +170,7 @@ These are evidence points, not user approvals:
 - Phase 3 React Router exact action-origin configuration: `888d5fe053da1993113f0362044f22d03e4e6cbf` / `33802077280`
 - Phase 3 root-cause synchronized handoff: `9d532d58e2efc32123a0b7be4511a1435b19b6d6` / `33802280036`
 - Phase 3 repeated guard + Findings evidence surface: `5b93c555fb981f6ab7d244f760bbecd01654a66e` / `33866964811`
+- Phase 3 embedded-safe Findings navigation: `68a69539e0304bb20de9435f54393f5054a1e00c` / `33868940433`
 
 ## Other unresolved items
 
