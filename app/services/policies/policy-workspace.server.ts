@@ -39,7 +39,6 @@ export async function loadPoliciesForShopV1(shopId: string) {
       description: true,
       status: true,
       activeRevisionId: true,
-      activeRevision: false,
       revisions: {
         orderBy: { revisionNumber: "desc" },
         take: 1,
@@ -125,7 +124,9 @@ export async function loadPolicyWorkspaceForShopV1(
     throw new Error("active policy revision is missing from policy history");
   }
 
-  const mapRules = (rules: typeof row.revisions[number]["rules"]) =>
+  const mapRules = (
+    rules: (typeof row.revisions)[number]["rules"],
+  ): readonly PolicyRuleWorkspaceItemV1[] =>
     Object.freeze(
       rules.map((rule) => {
         if (rule.position === null) {
