@@ -53,7 +53,9 @@ export function buildNextPolicyRevisionInputV1(input: {
   );
   for (const key of editByKey.keys()) {
     if (!existingKeys.has(key)) {
-      throw new Error(`policy rule edit does not match active revision: ${key}`);
+      throw new Error(
+        `policy rule edit does not match active revision: ${key}`,
+      );
     }
   }
 

@@ -14,7 +14,10 @@ export type WaivableFindingV1 = Readonly<{
 }>;
 
 export type CreateExactWaiverDependenciesV1 = Readonly<{
-  loadFinding(shopId: string, findingId: string): Promise<WaivableFindingV1 | null>;
+  loadFinding(
+    shopId: string,
+    findingId: string,
+  ): Promise<WaivableFindingV1 | null>;
   loadExactExceptions(
     shopId: string,
     finding: WaivableFindingV1,
@@ -96,7 +99,10 @@ export async function createExactFindingWaiverV1(
     throw new Error("only an open technical FAIL finding can be waived");
   }
 
-  const existing = await dependencies.loadExactExceptions(input.shopId, finding);
+  const existing = await dependencies.loadExactExceptions(
+    input.shopId,
+    finding,
+  );
   const now = new Date(createdTimestamp);
   if (existing.some((exception) => isExceptionActiveAt(exception, now))) {
     throw new Error("an active exact waiver already exists for this finding");

@@ -90,12 +90,7 @@ export async function createExactFindingWaiverForShopV1(input: {
     loadFinding: loadWaivableFinding,
     loadExactExceptions: loadExactExceptionsForFinding,
     nextId: () => `exception_${randomUUID()}`,
-    persistCreate: async ({
-      exception,
-      findingId,
-      notes,
-      createdByActor,
-    }) => {
+    persistCreate: async ({ exception, findingId, notes, createdByActor }) => {
       await prisma.$transaction(async (tx) => {
         await tx.ruleException.create({
           data: {
@@ -179,7 +174,9 @@ export async function revokeExactFindingWaiverForShopV1(input: {
           },
         });
         if (result.count !== 1) {
-          throw new Error("waiver changed before revocation could be persisted");
+          throw new Error(
+            "waiver changed before revocation could be persisted",
+          );
         }
 
         await tx.findingEvent.create({

@@ -89,5 +89,8 @@ test("policy revision edit rejects duplicate or unknown rule targets", () => {
 test("policy revision ids are deterministic by logical policy and revision number", () => {
   assert.equal(nextPolicyRevisionIdV1("policy_a", 2), "policy_a:r2");
   assert.throws(() => nextPolicyRevisionIdV1("", 2), /policyId/);
-  assert.throws(() => nextPolicyRevisionIdV1("policy_a", 0), /positive integer/);
+  assert.throws(
+    () => nextPolicyRevisionIdV1("policy_a", 0),
+    /positive integer/,
+  );
 });

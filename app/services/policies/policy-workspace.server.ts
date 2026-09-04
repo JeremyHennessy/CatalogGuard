@@ -60,7 +60,9 @@ export async function loadPoliciesForShopV1(shopId: string) {
         name: row.name,
         ...(row.description ? { description: row.description } : {}),
         status: row.status,
-        ...(row.activeRevisionId ? { activeRevisionId: row.activeRevisionId } : {}),
+        ...(row.activeRevisionId
+          ? { activeRevisionId: row.activeRevisionId }
+          : {}),
         revisionCount: row._count.revisions,
         ...(latest
           ? {

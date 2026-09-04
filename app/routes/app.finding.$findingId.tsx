@@ -128,7 +128,8 @@ function JsonEvidence({ label, value }: { label: string; value?: string }) {
 }
 
 export default function CatalogGuardFindingDetail() {
-  const { finding, shopDomain, exceptionState } = useLoaderData<typeof loader>();
+  const { finding, shopDomain, exceptionState } =
+    useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const latest = finding.latestEvaluation;
@@ -256,7 +257,9 @@ export default function CatalogGuardFindingDetail() {
                 <br />
                 <textarea
                   value={waiverNotes}
-                  onChange={(event) => setWaiverNotes(event.currentTarget.value)}
+                  onChange={(event) =>
+                    setWaiverNotes(event.currentTarget.value)
+                  }
                 />
               </label>
             </div>
@@ -299,7 +302,8 @@ export default function CatalogGuardFindingDetail() {
                     : exception.expiresAt
                       ? "EXPIRED"
                       : "INACTIVE"}{" "}
-                — {exception.reason} — created {displayDate(exception.createdAt)}
+                — {exception.reason} — created{" "}
+                {displayDate(exception.createdAt)}
                 {exception.expiresAt
                   ? ` — expires ${displayDate(exception.expiresAt)}`
                   : ""}
@@ -339,7 +343,9 @@ export default function CatalogGuardFindingDetail() {
             Evaluated: {displayDate(latest.evaluatedAt)}
           </s-list-item>
           {latest.exceptionId ? (
-            <s-list-item>Exception id at scan: {latest.exceptionId}</s-list-item>
+            <s-list-item>
+              Exception id at scan: {latest.exceptionId}
+            </s-list-item>
           ) : null}
           {latest.merchantLabel ? (
             <s-list-item>Policy label: {latest.merchantLabel}</s-list-item>

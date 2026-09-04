@@ -156,7 +156,9 @@ export default function CatalogGuardPolicyWorkspace() {
     form.set(
       "edits",
       JSON.stringify(
-        rules.map(({ configJson: _config, scopeJson: _scope, ...rule }) => rule),
+        rules.map(
+          ({ configJson: _config, scopeJson: _scope, ...rule }) => rule,
+        ),
       ),
     );
     submit(form, { method: "post" });
@@ -181,7 +183,9 @@ export default function CatalogGuardPolicyWorkspace() {
 
       {!policy.activeRevision ? (
         <s-section heading="No active revision">
-          <s-paragraph>This policy does not have an active revision.</s-paragraph>
+          <s-paragraph>
+            This policy does not have an active revision.
+          </s-paragraph>
         </s-section>
       ) : (
         <>
@@ -204,7 +208,9 @@ export default function CatalogGuardPolicyWorkspace() {
                 <br />
                 <textarea
                   value={description}
-                  onChange={(event) => setDescription(event.currentTarget.value)}
+                  onChange={(event) =>
+                    setDescription(event.currentTarget.value)
+                  }
                 />
               </label>
             </div>
@@ -311,8 +317,10 @@ export default function CatalogGuardPolicyWorkspace() {
           {policy.revisions.map((revision) => (
             <s-list-item key={revision.id}>
               v{revision.revisionNumber}
-              {revision.id === policy.activeRevisionId ? " — ACTIVE" : ""} —{" "}
-              {revision.nameSnapshot} — {displayDate(revision.createdAt)}
+              {revision.id === policy.activeRevisionId
+                ? " — ACTIVE"
+                : ""} — {revision.nameSnapshot} —{" "}
+              {displayDate(revision.createdAt)}
               {revision.changeSummary
                 ? ` — ${revision.changeSummary}`
                 : " — no change summary"}
