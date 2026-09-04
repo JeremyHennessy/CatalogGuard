@@ -239,7 +239,11 @@ function ConfigField(input: {
           onChange={(event) => {
             const raw = event.currentTarget.value;
             onChange(
-              withField(config, field.key, raw === "" ? undefined : Number(raw)),
+              withField(
+                config,
+                field.key,
+                raw === "" ? undefined : Number(raw),
+              ),
             );
           }}
         />
@@ -276,7 +280,9 @@ function ScopeEditor(input: {
 }) {
   const { scope, onChange } = input;
   const statuses = Array.isArray(scope.statuses)
-    ? scope.statuses.filter((value): value is string => typeof value === "string")
+    ? scope.statuses.filter(
+        (value): value is string => typeof value === "string",
+      )
     : [];
 
   const setStringList = (key: string, value: string) =>
