@@ -3,6 +3,7 @@ import type {
   EvaluationContextV1,
   RuleResult,
   RuleSeverity,
+  RuleStatus,
 } from "../rules/contracts";
 import { evaluateRule } from "../rules/engine";
 import type { ValidatedPolicyRevisionV1 } from "./contracts";
@@ -83,6 +84,22 @@ export function isExceptionActiveAt(
   return true;
 }
 
+export function currentEnforcementForRuleStatusV1(
+  status: RuleStatus,
+  hasActiveExactException: boolean,
+): EnforcementDisposition {
+  switch (status) {
+    case "PASS":
+      return "COMPLIANT";
+    case "NOT_APPLICABLE":
+      return "NOT_APPLICABLE";
+    case "UNKNOWN":
+      return "INDETERMINATE";
+    case "FAIL":
+      return hasActiveExactException ? "WAIVED" : "VIOLATION";
+  }
+}
+
 function matchesExactException(
   exception: ExactRuleExceptionV1,
   result: RuleResult,
@@ -118,23 +135,18 @@ function enforcementFor(
   context: EvaluationContextV1,
   exceptions: readonly ExactRuleExceptionV1[],
 ): { enforcement: EnforcementDisposition; exceptionId?: string } {
-  switch (result.status) {
-    case "PASS":
-      return { enforcement: "COMPLIANT" };
-    case "NOT_APPLICABLE":
-      return { enforcement: "NOT_APPLICABLE" };
-    case "UNKNOWN":
-      return { enforcement: "INDETERMINATE" };
-    case "FAIL": {
-      const exception = activeExceptionFor(exceptions, result, context);
+  const exception =
+    result.status === "FAIL"
+      ? activeExceptionFor(exceptions, result, context)
+      : undefined;
+  const enforcement = currentEnforcementForRuleStatusV1(
+    result.status,
+    Boolean(exception),
+  );
 
-      if (exception) {
-        return { enforcement: "WAIVED", exceptionId: exception.id };
-      }
-
-      return { enforcement: "VIOLATION" };
-    }
-  }
+  return exception
+    ? { enforcement, exceptionId: exception.id }
+    : { enforcement };
 }
 
 function evaluationSortKey(evaluation: PolicyEvaluationV1) {

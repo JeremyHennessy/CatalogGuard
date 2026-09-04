@@ -55,6 +55,9 @@ export default function CatalogGuardOverview() {
           reads the persisted state; it does not silently rerun the catalog
           scan.
         </s-paragraph>
+        <s-paragraph>
+          <s-link href="/app/policies">Manage policies</s-link>
+        </s-paragraph>
       </s-section>
 
       {overview.baseline ? (

@@ -7,6 +7,7 @@ import {
   type PersistedPolicyRevisionSnapshotV1,
 } from "./policy-mapper";
 import type {
+  AppendAndActivatePolicyRevisionInput,
   AppendPolicyRevisionInput,
   CreatePolicyInput,
   PolicyRepository,
@@ -60,6 +61,19 @@ async function persistRevision(
   });
 }
 
+async function expectedNextRevisionNumber(
+  tx: Prisma.TransactionClient,
+  policyId: string,
+) {
+  const latest = await tx.policyRevision.findFirst({
+    where: { policyId },
+    orderBy: { revisionNumber: "desc" },
+    select: { revisionNumber: true },
+  });
+
+  return (latest?.revisionNumber ?? 0) + 1;
+}
+
 export class PrismaPolicyRepository implements PolicyRepository {
   constructor(private readonly client: PrismaClient = prisma) {}
 
@@ -109,12 +123,10 @@ export class PrismaPolicyRepository implements PolicyRepository {
         throw new Error(`policy not found: ${input.policyId}`);
       }
 
-      const latest = await tx.policyRevision.findFirst({
-        where: { policyId: input.policyId },
-        orderBy: { revisionNumber: "desc" },
-        select: { revisionNumber: true },
-      });
-      const expectedRevisionNumber = (latest?.revisionNumber ?? 0) + 1;
+      const expectedRevisionNumber = await expectedNextRevisionNumber(
+        tx,
+        input.policyId,
+      );
 
       if (input.revision.revisionNumber !== expectedRevisionNumber) {
         throw new Error(
@@ -123,6 +135,53 @@ export class PrismaPolicyRepository implements PolicyRepository {
       }
 
       await persistRevision(tx, input.revision, input.snapshot);
+    });
+  }
+
+  async appendAndActivateRevision(
+    input: AppendAndActivatePolicyRevisionInput,
+  ): Promise<void> {
+    if (input.revision.policyId !== input.policyId) {
+      throw new Error(
+        "policy revision does not belong to the requested policy",
+      );
+    }
+
+    await this.client.$transaction(async (tx) => {
+      const policy = await tx.policy.findFirst({
+        where: { id: input.policyId, shopId: input.shopId },
+        select: { id: true, activeRevisionId: true },
+      });
+
+      if (!policy) {
+        throw new Error(`policy not found for shop: ${input.policyId}`);
+      }
+
+      if (policy.activeRevisionId !== input.baseRevisionId) {
+        throw new Error(
+          "active policy revision changed; reload before saving a new revision",
+        );
+      }
+
+      const expectedRevisionNumber = await expectedNextRevisionNumber(
+        tx,
+        input.policyId,
+      );
+      if (input.revision.revisionNumber !== expectedRevisionNumber) {
+        throw new Error(
+          `policy revision must append revision ${expectedRevisionNumber}, received ${input.revision.revisionNumber}`,
+        );
+      }
+
+      await persistRevision(tx, input.revision, input.snapshot);
+      await tx.policy.update({
+        where: { id: input.policyId },
+        data: {
+          name: input.name,
+          description: input.description ?? null,
+          activeRevisionId: input.revision.id,
+        },
+      });
     });
   }
 
