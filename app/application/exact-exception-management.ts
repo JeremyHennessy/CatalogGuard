@@ -39,7 +39,7 @@ export type RevokeExactWaiverDependenciesV1 = Readonly<{
     revokedAt: string;
     revokedByActor?: string;
     revocationReason: string;
-    findingId?: string;
+    findingId: string;
   }): Promise<void>;
 }>;
 
@@ -129,6 +129,7 @@ export async function createExactFindingWaiverV1(
 export async function revokeExactFindingWaiverV1(
   input: Readonly<{
     shopId: string;
+    findingId: string;
     exceptionId: string;
     revokedAt: string;
     revokedByActor?: string;
@@ -149,6 +150,9 @@ export async function revokeExactFindingWaiverV1(
   if (!exception) {
     throw new Error(`waiver not found for shop: ${input.exceptionId}`);
   }
+  if (exception.findingId !== input.findingId) {
+    throw new Error("waiver does not belong to the requested finding");
+  }
   if (exception.revokedAt) {
     throw new Error("waiver is already revoked");
   }
@@ -162,7 +166,7 @@ export async function revokeExactFindingWaiverV1(
     revokedAt: input.revokedAt,
     revokedByActor: input.revokedByActor,
     revocationReason,
-    findingId: exception.findingId,
+    findingId: input.findingId,
   });
 
   return Object.freeze({
