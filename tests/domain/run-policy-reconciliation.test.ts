@@ -15,24 +15,22 @@ const revision = validatePolicyRevisionV1(
 
 test("explicit policy reconciliation uses the exact active revision and POLICY_CHANGE cause", async () => {
   const scans: unknown[] = [];
-  const result = await runPolicyReconciliationV1(
-    {
-      admin: { kind: "admin" },
-      shopId: "shop_a",
-      policyId: revision.policyId,
-      expectedRevisionId: revision.id,
-      apiVersion: "2026-07",
-      engineVersion: "catalogguard-policy-v1",
-      now: () => "2026-09-04T13:00:00.000Z",
-      nextScanId: () => "scan_policy_change_1",
-      loadActiveRevision: async () => revision,
-      loadExceptions: async () => [],
-      runScan: async (input) => {
-        scans.push(input);
-        return { complete: true };
-      },
+  const result = await runPolicyReconciliationV1({
+    admin: { kind: "admin" },
+    shopId: "shop_a",
+    policyId: revision.policyId,
+    expectedRevisionId: revision.id,
+    apiVersion: "2026-07",
+    engineVersion: "catalogguard-policy-v1",
+    now: () => "2026-09-04T13:00:00.000Z",
+    nextScanId: () => "scan_policy_change_1",
+    loadActiveRevision: async () => revision,
+    loadExceptions: async () => [],
+    runScan: async (input) => {
+      scans.push(input);
+      return { complete: true };
     },
-  );
+  });
 
   assert.equal(result.scanId, "scan_policy_change_1");
   assert.equal(result.policyRevisionId, revision.id);

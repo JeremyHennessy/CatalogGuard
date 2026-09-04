@@ -42,7 +42,9 @@ export async function runPolicyReconciliationV1<TAdmin, TScanResult>(
     throw new Error(`active policy revision not found: ${input.policyId}`);
   }
   if (revision.id !== input.expectedRevisionId) {
-    throw new Error("active policy revision changed; reload before reconciling");
+    throw new Error(
+      "active policy revision changed; reload before reconciling",
+    );
   }
 
   const observedAt = input.now();
