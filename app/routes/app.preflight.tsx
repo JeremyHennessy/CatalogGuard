@@ -310,8 +310,9 @@ export default function CatalogGuardPreflight() {
       {preflightRuns.items.length === 0 ? (
         <s-section heading="No preflight runs yet">
           <s-paragraph>
-            No target-specific launch checks are persisted yet. Run a product
-            preflight above to create immutable evidence for selected products.
+            No target-specific launch checks are persisted yet. Run a preflight
+            above to create immutable evidence for selected products or
+            collection members.
           </s-paragraph>
         </s-section>
       ) : (
@@ -319,7 +320,10 @@ export default function CatalogGuardPreflight() {
           <s-unordered-list>
             {preflightRuns.items.map((run) => (
               <s-list-item key={run.id}>
-                {run.targetType} - {run.outcome ?? run.status} - policy{" "}
+                <s-link href={"/app/preflight/" + encodeURIComponent(run.id)}>
+                  {run.targetType} preflight
+                </s-link>{" "}
+                - {run.outcome ?? run.status} - policy{" "}
                 {run.policyRevision.nameSnapshot} v
                 {run.policyRevision.revisionNumber} - completed{" "}
                 {displayDate(run.completedAt)} - targets {run.targetCount}
