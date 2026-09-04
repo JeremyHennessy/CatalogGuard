@@ -7,6 +7,8 @@ export type PolicyRuleControlEditV1 = Readonly<{
   enabled: boolean;
   severity: RuleSeverity;
   blocking: boolean;
+  config: unknown;
+  scope: unknown;
 }>;
 
 function requireNonEmpty(value: string, field: string) {
@@ -80,8 +82,8 @@ export function buildNextPolicyRevisionInputV1(input: {
         enabled: edit.enabled,
         severity: edit.severity,
         blocking: edit.blocking,
-        config: rule.config,
-        scope: rule.scope,
+        config: edit.config,
+        scope: edit.scope,
       };
     }),
   };
