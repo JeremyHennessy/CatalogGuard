@@ -1,3 +1,4 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import prisma from "../../db.server";
 
 const PREFLIGHT_RUN_LIMIT = 50;
@@ -84,7 +85,9 @@ export async function loadRecentPreflightRunsV1(shopId: string) {
         waiverCount: row.waiverCount,
         indeterminateBlockingCount: row.indeterminateBlockingCount,
         createdAt: row.createdAt.toISOString(),
-        ...(row.completedAt ? { completedAt: row.completedAt.toISOString() } : {}),
+        ...(row.completedAt
+          ? { completedAt: row.completedAt.toISOString() }
+          : {}),
         policyRevision: Object.freeze({
           id: row.policyRevision.id,
           revisionNumber: row.policyRevision.revisionNumber,
