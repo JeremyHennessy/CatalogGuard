@@ -66,9 +66,7 @@ export default function CatalogGuardFindings() {
                 {finding.evaluation.message} — target{" "}
                 {finding.subresourceGid ?? finding.resourceGid} — last seen{" "}
                 {displayDate(finding.lastSeenAt)} —{" "}
-                <s-link
-                  href={`/app/finding/${encodeURIComponent(finding.id)}`}
-                >
+                <s-link href={`/app/finding/${encodeURIComponent(finding.id)}`}>
                   View evidence history
                 </s-link>
               </s-list-item>
