@@ -78,21 +78,26 @@ test("quality gate deploys migrations against a clean development database", asy
   assert.match(workflow, /npm run prisma:migrate:deploy/);
 });
 
+test(
+  "catalog change migration preserves webhook idempotency and pending reconciliation evidence",
+  async () => {
+    const migration = await read(webhookMigrationPath);
 
-test("catalog change migration preserves webhook idempotency and pending reconciliation evidence", async () => {
-  const migration = await read(webhookMigrationPath);
-
-  assert.match(migration, /CREATE TABLE "CatalogChangeEvent"/);
-  assert.match(migration, /"id" TEXT NOT NULL PRIMARY KEY/);
-  assert.match(migration, /"payloadFingerprint" TEXT NOT NULL/);
-  assert.match(migration, /"processingState" TEXT NOT NULL DEFAULT 'PENDING_INCREMENTAL_RECONCILIATION'/);
-  assert.match(
-    migration,
-    /CatalogChangeEvent_shopId_processingState_receivedAt_idx.*shopId.*processingState.*receivedAt/s,
-  );
-  assert.match(
-    migration,
-    /CatalogChangeEvent_shopDomain_topic_receivedAt_idx.*shopDomain.*topic.*receivedAt/s,
-  );
-  assert.match(migration, /ON DELETE SET NULL/);
-});
+    assert.match(migration, /CREATE TABLE "CatalogChangeEvent"/);
+    assert.match(migration, /"id" TEXT NOT NULL PRIMARY KEY/);
+    assert.match(migration, /"payloadFingerprint" TEXT NOT NULL/);
+    assert.match(
+      migration,
+      /"processingState" TEXT NOT NULL DEFAULT 'PENDING_INCREMENTAL_RECONCILIATION'/,
+    );
+    assert.match(
+      migration,
+      /CatalogChangeEvent_shopId_processingState_receivedAt_idx.*shopId.*processingState.*receivedAt/s,
+    );
+    assert.match(
+      migration,
+      /CatalogChangeEvent_shopDomain_topic_receivedAt_idx.*shopDomain.*topic.*receivedAt/s,
+    );
+    assert.match(migration, /ON DELETE SET NULL/);
+  },
+);
