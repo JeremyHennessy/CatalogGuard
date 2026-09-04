@@ -242,3 +242,14 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 **Reason:** A historical preflight is evidence of what was evaluated at that time. Re-reading Shopify or re-running the current rule engine could silently reinterpret old launch evidence through changed catalog membership, changed product data, or changed policy semantics.
 
 **Status:** Active. Live Shopify acceptance remains pending.
+
+
+## D-025 — Product webhooks record change intent, not current-state truth
+
+**Date:** 2026-09-04
+
+**Decision:** Product create/update/delete webhooks persist idempotent `CatalogChangeEvent` evidence keyed by Shopify `webhookId`, record canonical payload/fingerprint/resource identity when lossless, and mark matched-shop events `PENDING_INCREMENTAL_RECONCILIATION`. Webhook receipt does not update current findings or claim the catalog is reconciled.
+
+**Reason:** Webhooks can be duplicated, delayed, delivered out of order, or missed. CatalogGuard needs webhook evidence for prompt follow-up work, but complete reconciliation remains the correctness mechanism for trusted current-state findings.
+
+**Status:** Active. Live Shopify webhook delivery acceptance and the pending-event reconciliation processor remain pending.

@@ -382,6 +382,8 @@ lastError?
 
 Use the strongest stable delivery identifier Shopify provides in the current webhook format. Fallback payload hashing should not be assumed sufficient without collision/replay considerations.
 
+Implementation note (2026-09-04): the current Prisma schema implements product webhook receipt/change-intent evidence as `CatalogChangeEvent`, keyed by Shopify `webhookId`. It records normalized topic, API version, shop domain, optional matched shop id, canonical payload JSON, payload fingerprint, product identity when lossless, received timestamp, and processing state. Product create/update require `admin_graphql_api_id`; delete only derives a product GID from a string or safe integer id. This is evidence of change intent and delivery, not proof of current catalog state.
+
 ## 19. Preflight
 
 Could use Scan with `scanType=PREFLIGHT` plus specialized target tables.
@@ -477,7 +479,9 @@ Likely important indexes:
 - Finding by shop + rule code
 - Evaluation by scan
 - Scan by shop + startedAt/status
-- WebhookReceipt by delivery/idempotency identifier
+- WebhookReceipt/CatalogChangeEvent by delivery/idempotency identifier
+- CatalogChangeEvent by shop + processing state + received time
+- CatalogChangeEvent by shop domain + topic + received time
 - PolicyRevision by policy + revision number
 - Exception by finding + active date conditions
 
