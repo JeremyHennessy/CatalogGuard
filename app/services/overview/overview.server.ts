@@ -1,4 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import prisma from "../../db.server";
+import { currentEnforcementForRuleStatusV1 } from "../../domain/policy/evaluator";
+import type { RuleStatus } from "../../domain/rules/contracts";
 
 export type OverviewScanSummaryV1 = Readonly<{
   id: string;
@@ -28,6 +31,19 @@ export type OverviewFindingV1 = Readonly<{
   message: string;
   reasonCode?: string;
 }>;
+
+function ruleStatus(value: string): RuleStatus {
+  if (
+    value === "PASS" ||
+    value === "FAIL" ||
+    value === "NOT_APPLICABLE" ||
+    value === "UNKNOWN"
+  ) {
+    return value;
+  }
+
+  throw new Error(`unsupported persisted rule status: ${value}`);
+}
 
 function scanSummary(row: {
   id: string;
@@ -71,7 +87,20 @@ const scanSelect = {
   warningCount: true,
 } as const;
 
-export async function loadCatalogGuardOverviewV1(shopId: string) {
+function activeExactExceptionWhere(observedAt: Date): Prisma.RuleExceptionWhereInput {
+  return {
+    coverageType: "FINDING_EXACT",
+    createdAt: { lte: observedAt },
+    revokedAt: null,
+    OR: [{ expiresAt: null }, { expiresAt: { gt: observedAt } }],
+  };
+}
+
+export async function loadCatalogGuardOverviewV1(
+  shopId: string,
+  observedAt = new Date(),
+) {
+  const activeExceptionWhere = activeExactExceptionWhere(observedAt);
   const [
     baselineRow,
     latestCompleteRow,
@@ -114,10 +143,11 @@ export async function loadCatalogGuardOverviewV1(shopId: string) {
         currentStatus: "OPEN",
         latestEvaluation: {
           is: {
-            enforcement: "VIOLATION",
+            status: "FAIL",
             policyRule: { is: { blocking: true } },
           },
         },
+        exceptions: { none: activeExceptionWhere },
       },
     }),
     prisma.finding.count({
@@ -126,7 +156,7 @@ export async function loadCatalogGuardOverviewV1(shopId: string) {
         currentStatus: "OPEN",
         latestEvaluation: {
           is: {
-            enforcement: "INDETERMINATE",
+            status: "UNKNOWN",
             policyRule: { is: { blocking: true } },
           },
         },
@@ -136,7 +166,8 @@ export async function loadCatalogGuardOverviewV1(shopId: string) {
       where: {
         shopId,
         currentStatus: "OPEN",
-        latestEvaluation: { is: { enforcement: "WAIVED" } },
+        latestEvaluation: { is: { status: "FAIL" } },
+        exceptions: { some: activeExceptionWhere },
       },
     }),
     prisma.finding.findMany({
@@ -153,11 +184,16 @@ export async function loadCatalogGuardOverviewV1(shopId: string) {
         lastSeenAt: true,
         latestEvaluation: {
           select: {
-            enforcement: true,
+            status: true,
             message: true,
             reasonCode: true,
             policyRule: { select: { severity: true, blocking: true } },
           },
+        },
+        exceptions: {
+          where: activeExceptionWhere,
+          take: 1,
+          select: { id: true },
         },
       },
     }),
@@ -173,7 +209,10 @@ export async function loadCatalogGuardOverviewV1(shopId: string) {
         classification: row.classification,
         firstSeenAt: row.firstSeenAt.toISOString(),
         lastSeenAt: row.lastSeenAt.toISOString(),
-        enforcement: row.latestEvaluation.enforcement,
+        enforcement: currentEnforcementForRuleStatusV1(
+          ruleStatus(row.latestEvaluation.status),
+          row.exceptions.length > 0,
+        ),
         severity: row.latestEvaluation.policyRule.severity,
         blocking: row.latestEvaluation.policyRule.blocking,
         message: row.latestEvaluation.message,
