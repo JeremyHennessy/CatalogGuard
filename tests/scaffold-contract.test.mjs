@@ -68,6 +68,18 @@ test("CatalogGuard Shopify catalog path remains read-only", async () => {
   );
 });
 
+test("embedded Findings navigation uses Shopify links rather than raw anchors", async () => {
+  const overview = await read("app/routes/app._index.tsx");
+  const findings = await read("app/routes/app.findings.tsx");
+  const findingDetail = await read("app/routes/app.finding.$findingId.tsx");
+  const combined = [overview, findings, findingDetail].join("\n");
+
+  assert.match(overview, /<s-link href="\/app\/findings">/);
+  assert.match(findings, /<s-link href="\/app">/);
+  assert.match(findingDetail, /<s-link href="\/app\/findings">/);
+  assert.doesNotMatch(combined, /<a\b/);
+});
+
 test("environment example contains placeholders rather than token-shaped secrets", async () => {
   const envExample = await read(".env.example");
 
