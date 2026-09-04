@@ -1,4 +1,3 @@
-npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import prisma from "../../db.server";
 
 const PREFLIGHT_RUN_LIMIT = 50;

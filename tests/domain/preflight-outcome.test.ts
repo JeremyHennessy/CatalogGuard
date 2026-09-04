@@ -1,4 +1,3 @@
-npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
 import type { PolicyEvaluationV1 } from "../../app/domain/policy/evaluator";

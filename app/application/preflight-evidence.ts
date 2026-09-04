@@ -1,4 +1,3 @@
-npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import { createHash } from "node:crypto";
 import type { PolicyEvaluationV1 } from "../domain/policy/evaluator";
 import {
