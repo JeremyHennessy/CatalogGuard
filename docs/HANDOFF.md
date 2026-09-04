@@ -14,6 +14,11 @@ Phase 3: issue #13 CLOSED / PR #14 draft stacked on Phase 2
 Phase 4 branch: phase-4/policies-exceptions
 Phase 4 issue: #15 OPEN
 Phase 4 PR: #16 draft stacked on Phase 3
+Phase 5 branch: phase-5/preflight-evidence
+Phase 5 PR: #17 draft stacked on Phase 4
+Phase 5 code checkpoint: d593dbfcc4468281bebeb5d521377fef16007f6f
+Phase 5 Quality Gate: 33879020074 — success
+Phase 5 live acceptance: pending
 Phase 4 combined green code head: d25be542ef26439026ca4288ffd2105434df2610
 Phase 4 combined Quality Gate: 33876152592 — success
 Shopify Admin API: 2026-07 / ApiVersion.July26
@@ -214,7 +219,45 @@ The run remains read-only to Shopify products and uses the current exact-waiver 
 
 Tests prove exact active-revision capture, stale-revision rejection before scan execution, and `POLICY_CHANGE` cause propagation.
 
-## Next live acceptance
+
+## Phase 5 — first preflight evidence slice repository green, live acceptance pending
+
+Branch: `phase-5/preflight-evidence`
+Draft PR: #17 stacked on Phase 4
+Code checkpoint: `d593dbfcc4468281bebeb5d521377fef16007f6f`
+Quality Gate: `33879020074` — **success**
+
+This slice creates the preflight evidence foundation without changing Shopify write permissions or mutating Shopify products.
+
+### Deterministic outcome and evidence planning
+
+`summarizePreflightEvaluationsV1` and `buildPreflightEvidencePlanV1` now provide a deterministic preflight contract:
+
+- blocking technical violations produce `FAIL`;
+- blocking indeterminate evidence produces `INDETERMINATE` when no blocking violation exists;
+- waived blocking failures produce `PASS_WITH_WAIVERS` when no blocking violation/indeterminate exists;
+- non-blocking violations do not block `PASS`;
+- all evaluations must match the exact immutable policy revision;
+- every evaluated product/variant must be present in the materialized target set;
+- target and evaluation order is canonicalized before fingerprinting.
+
+### Immutable persistence boundary
+
+`PrismaPreflightRepository` persists `PreflightRun` and `PreflightTarget` evidence only after validating that the linked scan exists, is `COMPLETE`, has `scanType: PREFLIGHT`, and matches the same shop + policy revision. Reusing a preflight run ID is allowed only when immutable identity, outcome counts, fingerprinted target definition, and materialized targets match exactly; conflicting reuse errors instead of rewriting history.
+
+`targetDefinitionJson` stores a canonical evidence record containing both `inputFingerprint` and `targetDefinition`.
+
+### Merchant history surface
+
+The app now has `/app/preflight` and an Overview link to **Preflight evidence**. The route reads persisted preflight runs for the authenticated shop, shows policy revision/outcome/count/source freshness/target evidence, and has an honest empty state when no runs exist.
+
+### Boundary still pending
+
+Live preflight run execution is deliberately not wired yet. The existing full-scan reconciliation path mutates current Finding lifecycle, and CatalogGuard still needs an explicit product decision on whether PREFLIGHT scans should update global current findings or remain launch-review evidence only.
+
+Live Shopify acceptance for Phase 5 is pending.
+
+## Next live acceptance — Phase 4 follow-on
 
 Preserve the existing `dev.sqlite` and Shopify development config. Do **not** create another baseline.
 
@@ -227,9 +270,9 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 7. Any newly failing DRAFT resources introduced solely by the widened policy scope should be `POLICY_CHANGE_FAILURE`, not `NEW_REGRESSION`. Do not predict the count before the live store is evaluated.
 8. Optionally create an exact waiver on one blocking technical FAIL after the reconciliation: Overview `Waived failures` should increase and `Blocking violations` should decrease while technical FAIL remains unchanged. Revoke it and those current-state counts/enforcement should restore without another scan or Evaluation mutation.
 
-## Next engineering work after this live acceptance
+## Next engineering work after Phase 4 follow-on live acceptance
 
-1. Preflight persistence and merchant UI.
+1. Wire live preflight run actions after deciding whether PREFLIGHT scans should update global current findings or remain launch-review evidence only.
 2. Webhook/incremental detection paired with periodic full reconciliation.
 3. Evaluate Shopify Bulk Operations before production-scale large-catalog use.
 4. Production hosting/PostgreSQL planning only after the evidence workflow is accepted.
@@ -245,11 +288,12 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 - Phase 4 overlay-aware enforcement/Overview: `4bcecd95ed082c96dc9cb0eb2587c76cf9e48471` / `33874708162`
 - Phase 4 deterministic config/scope editor: `c46a1333ca17be0b2b86ee0d8991d21aca9fee36` / `33875437504`
 - Phase 4 combined policy-control/reconciliation checkpoint: `d25be542ef26439026ca4288ffd2105434df2610` / `33876152592`
+- Phase 5 preflight evidence/history: `d593dbfcc4468281bebeb5d521377fef16007f6f` / `33879020074`
 
 ## Other unresolved items
 
 - No production host or PostgreSQL deployment is verified.
-- No preflight merchant UI exists yet.
+- Preflight evidence history UI exists; no live preflight run action is wired or live-verified yet.
 - No webhook/incremental refresh runtime is wired yet.
 - Shopify Bulk Operations has not yet been evaluated for production-scale catalogs.
 - Locked install still reports 23 npm advisories (3 moderate, 20 high). Do not use `npm audit fix --force`; investigate dependency families separately.

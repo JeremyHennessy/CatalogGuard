@@ -404,6 +404,9 @@ createdAt
 completedAt?
 ```
 
+
+Implementation note (2026-09-04): the first persisted slice stores `targetDefinitionJson` as canonical evidence containing `inputFingerprint` plus `targetDefinition`. `PreflightTarget` rows materialize exact evaluated product/variant identities and fingerprints. Reusing a preflight run ID with different immutable evidence is rejected rather than treated as an update.
+
 ## 20. PreflightTarget
 
 Materialize exact evaluated target identity for reproducibility.

@@ -201,3 +201,13 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 **Reason:** Admin UI extensions and preflight tools do not automatically imply control over every native Shopify save/publish path.
 
 **Status:** Active.
+
+## D-021 — Preflight evidence uses immutable run records and materialized targets
+
+**Date:** 2026-09-04
+
+**Decision:** Persisted preflight evidence records the exact shop, linked PREFLIGHT scan, immutable policy revision, target definition, deterministic input fingerprint, outcome counts, source freshness, actor metadata, and materialized evaluated product/variant target fingerprints.
+
+**Reason:** Product sets and collection membership can change after launch review. Historical preflight evidence must remain reproducible without being reinterpreted through the current catalog or a later policy revision.
+
+**Status:** Active. Live preflight execution is not yet wired to merchant run actions; PREFLIGHT scans also do not update current Finding lifecycle until that product semantic is explicitly accepted.
