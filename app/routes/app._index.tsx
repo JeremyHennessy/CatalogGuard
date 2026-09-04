@@ -56,7 +56,7 @@ export default function CatalogGuardOverview() {
           scan.
         </s-paragraph>
         <s-paragraph>
-          <s-link href="/app/policies">Manage policies</s-link> ·{" "}
+          <s-link href="/app/policies">Manage policies</s-link>{" | "}
           <s-link href="/app/preflight">Preflight evidence</s-link>
         </s-paragraph>
       </s-section>
