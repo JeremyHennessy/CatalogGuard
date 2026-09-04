@@ -1,3 +1,4 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
 import type { PolicyEvaluationV1 } from "../../app/domain/policy/evaluator";
@@ -48,7 +49,11 @@ test("blocking violations make preflight fail", () => {
 
 test("blocking unknowns make preflight indeterminate when no violation exists", () => {
   const summary = summarizePreflightEvaluationsV1([
-    evaluation({ status: "UNKNOWN", enforcement: "INDETERMINATE", blocking: true }),
+    evaluation({
+      status: "UNKNOWN",
+      enforcement: "INDETERMINATE",
+      blocking: true,
+    }),
   ]);
 
   assert.equal(summary.outcome, "INDETERMINATE");
@@ -80,7 +85,11 @@ test("non-blocking violations do not block a preflight pass", () => {
 
 test("blocking violation outranks blocking indeterminate and waiver states", () => {
   const summary = summarizePreflightEvaluationsV1([
-    evaluation({ status: "UNKNOWN", enforcement: "INDETERMINATE", blocking: true }),
+    evaluation({
+      status: "UNKNOWN",
+      enforcement: "INDETERMINATE",
+      blocking: true,
+    }),
     evaluation({ status: "FAIL", enforcement: "WAIVED", blocking: true }),
     evaluation({ status: "FAIL", enforcement: "VIOLATION", blocking: true }),
   ]);
