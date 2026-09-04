@@ -1,3 +1,4 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import type { Prisma, PrismaClient } from "@prisma/client";
 import prisma from "../db.server";
 import type {
@@ -81,7 +82,9 @@ async function validateLinkedScan(
   }
 
   if (scan.status !== "COMPLETE") {
-    throw new Error("preflight scan must be complete before preflight persists");
+    throw new Error(
+      "preflight scan must be complete before preflight persists",
+    );
   }
 
   if (scan.scanType !== "PREFLIGHT") {
@@ -170,7 +173,10 @@ export class PrismaPreflightRepository implements PreflightRepository {
           outcome: plan.summary.outcome,
           targetDefinitionJson,
           sourceFreshnessAt: plan.run.sourceFreshnessAt
-            ? dateFromIso(plan.run.sourceFreshnessAt, "preflight sourceFreshnessAt")
+            ? dateFromIso(
+                plan.run.sourceFreshnessAt,
+                "preflight sourceFreshnessAt",
+              )
             : null,
           blockingViolationCount: plan.summary.blockingViolationCount,
           waiverCount: plan.summary.waiverCount,
