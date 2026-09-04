@@ -63,13 +63,13 @@ export default function CatalogGuardPreflight() {
           <s-unordered-list>
             {preflightRuns.items.map((run) => (
               <s-list-item key={run.id}>
-                {run.targetType} — {run.outcome ?? run.status} — policy{" "}
+                {run.targetType} - {run.outcome ?? run.status} - policy{" "}
                 {run.policyRevision.nameSnapshot} v
-                {run.policyRevision.revisionNumber} — completed{" "}
-                {displayDate(run.completedAt)} — targets {run.targetCount}
-                {run.targetsTruncated ? "+" : ""} — blocking violations{" "}
-                {run.blockingViolationCount} — blocking indeterminate{" "}
-                {run.indeterminateBlockingCount} — waivers {run.waiverCount}
+                {run.policyRevision.revisionNumber} - completed{" "}
+                {displayDate(run.completedAt)} - targets {run.targetCount}
+                {run.targetsTruncated ? "+" : ""} - blocking violations{" "}
+                {run.blockingViolationCount} - blocking indeterminate{" "}
+                {run.indeterminateBlockingCount} - waivers {run.waiverCount}
               </s-list-item>
             ))}
           </s-unordered-list>
@@ -84,7 +84,7 @@ export default function CatalogGuardPreflight() {
               <s-unordered-list>
                 {run.targets.map((target) => (
                   <s-list-item key={`${run.id}-${target.resourceGid}`}>
-                    {target.resourceType} — {target.resourceGid} — fingerprint{" "}
+                    {target.resourceType} - {target.resourceGid} - fingerprint{" "}
                     {target.resourceFingerprint}
                   </s-list-item>
                 ))}
