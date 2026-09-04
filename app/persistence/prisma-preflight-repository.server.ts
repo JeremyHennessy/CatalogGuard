@@ -167,7 +167,9 @@ async function validateLinkedScan(
   }
 }
 
-function assertEvidenceInputMatchesPlan(input: PersistPreflightEvidenceInputV1) {
+function assertEvidenceInputMatchesPlan(
+  input: PersistPreflightEvidenceInputV1,
+) {
   if (input.scan.id !== input.plan.run.scanId) {
     throw new Error("preflight evidence scan id must match run scan id");
   }

@@ -268,7 +268,9 @@ function buildPlan(input: {
 export async function runProductPreflightV1<TAdmin>(
   input: RunProductPreflightInputV1<TAdmin>,
 ): Promise<RunProductPreflightResultV1> {
-  const productGids = parseProductPreflightTargetGidsV1(input.productTargetText);
+  const productGids = parseProductPreflightTargetGidsV1(
+    input.productTargetText,
+  );
   const revision = await input.loadActiveRevision(input.shopId, input.policyId);
   if (!revision) {
     throw new Error(`active policy revision not found: ${input.policyId}`);

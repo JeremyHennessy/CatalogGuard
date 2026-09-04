@@ -201,9 +201,8 @@ export default function CatalogGuardPreflight() {
                   Active revision: {selectedPolicy.activeRevisionId}
                 </s-list-item>
                 <s-list-item>
-                  Revision created: {displayDate(
-                    selectedPolicy.activeRevisionCreatedAt,
-                  )}
+                  Revision created:{" "}
+                  {displayDate(selectedPolicy.activeRevisionCreatedAt)}
                 </s-list-item>
                 <s-list-item>
                   This preflight records evidence only; current findings are not

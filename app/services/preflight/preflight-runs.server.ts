@@ -65,7 +65,9 @@ export async function loadPreflightPolicyChoicesV1(shopId: string) {
         (revision) => revision.id === row.activeRevisionId,
       );
       if (!activeRevision) {
-        throw new Error("active policy revision is missing from policy history");
+        throw new Error(
+          "active policy revision is missing from policy history",
+        );
       }
 
       return [
