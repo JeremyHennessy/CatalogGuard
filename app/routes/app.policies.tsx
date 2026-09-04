@@ -52,7 +52,17 @@ export default function CatalogGuardPolicies() {
                 {policy.revisionCount === 1 ? "" : "s"}
                 {policy.latestRevision
                   ? ` — latest v${policy.latestRevision.revisionNumber}`
-                  : ""}
+                  : ""}{" "}
+                {policy.activeRevisionId ? (
+                  <>
+                    —{" "}
+                    <s-link
+                      href={`/app/policy/${encodeURIComponent(policy.id)}/reconcile`}
+                    >
+                      Run reconciliation
+                    </s-link>
+                  </>
+                ) : null}
               </s-list-item>
             ))}
           </s-unordered-list>
