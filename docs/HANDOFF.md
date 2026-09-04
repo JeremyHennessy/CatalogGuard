@@ -15,7 +15,7 @@ Phase 3 issue: #13 OPEN
 Phase 3 PR: #14 draft stacked on Phase 2
 Phase 3 embedded-navigation green code head: 68a69539e0304bb20de9435f54393f5054a1e00c
 Phase 3 embedded-navigation Quality Gate: 33868940433 — success
-Phase 3 current synchronized head: 09783e3426f00760d54912f892b504fc6b2742d2
+Phase 3 authoritative handoff head: 297bc9b8c09f04e7a28706b9d613918d6e478be0
 Shopify Admin API: 2026-07 / ApiVersion.July26
 React Router: 7.18.3
 Requested/granted Shopify scopes: read_products only
@@ -54,19 +54,11 @@ Repeated early baseline attempts failed with React Router `Bad Request` before C
 
 CatalogGuard pins React Router `7.18.3`, whose mutation Origin/CSRF validation runs before route actions. Shopify CLI development places the public tunnel origin in front of a local React Router listener, so the browser public origin can differ from the origin represented by the proxied request URL.
 
-CatalogGuard derives `allowedActionOrigins` from the **exact** Shopify public app host supplied by `SHOPIFY_APP_URL`/`HOST` compatibility fallback. Security constraints remain locked:
+CatalogGuard derives `allowedActionOrigins` from the **exact** Shopify public app host supplied by `SHOPIFY_APP_URL`/`HOST` compatibility fallback. Security constraints remain locked: no origin validation disable, no `*.trycloudflare.com` wildcard, no hard-coded transient tunnel host, and the scaffold contract rejects wildcard tunnel origins.
 
-- no CSRF/origin validation disable;
-- no `*.trycloudflare.com` wildcard;
-- no hard-coded transient tunnel host;
-- only the current configured Shopify app host is allowed;
-- scaffold contract rejects wildcard tunnel origins.
-
-Root-cause code head `888d5fe053da1993113f0362044f22d03e4e6cbf` passed Quality Gate `33802077280`. The fix was verified by the successful live baseline mutation.
+Root-cause code head `888d5fe053da1993113f0362044f22d03e4e6cbf` passed Quality Gate `33802077280` and was verified by the successful live baseline mutation.
 
 ## Live Phase 3 baseline — verified 2026-09-04
-
-The user established a real baseline from the embedded App Home after the action-origin fix.
 
 Observed persisted Overview evidence:
 
@@ -88,88 +80,74 @@ Waived failures: 0
 
 The evaluation total reconciles exactly: `6 + 21 + 0 + 25 = 52 = 26 variants × 2 development rules`.
 
-The observed open findings are `CG-SKU-001` technical FAILs classified `BASELINE_DEBT`, `CRITICAL`, blocking, `VIOLATION`, message `SKU is required.` This verifies that failures present at the explicit baseline are debt rather than regressions.
+The observed open findings are `CG-SKU-001` technical FAILs classified `BASELINE_DEBT`, `CRITICAL`, blocking, `VIOLATION`, message `SKU is required.` Failures present at baseline are therefore debt rather than regressions.
 
-The user subsequently pulled/restarted the next Phase 3 build and the Overview still showed the **same baseline timestamp and exact 17/26/6/21/0/25 plus 21-debt counts**. This verifies that Overview reload/restart reads persisted evidence rather than silently creating another scan.
+The user later restarted/pulled and the Overview still showed the same baseline timestamp and exact counts. This verifies persistence on reload/restart and that Overview does not silently rescan.
 
 ## Repeated-baseline guard — repository verified
 
-Baseline establishment is extracted into `establishDevBaselineV1` so the route remains a thin authenticated adapter.
+Baseline establishment is extracted into `establishDevBaselineV1`. Dedicated tests prove:
 
-The application service proves two paths:
-
-1. when a COMPLETE baseline already exists, it returns `ALREADY_ESTABLISHED` **before** policy creation/loading, exception loading, or Shopify scan execution;
-2. when no baseline exists, it creates/loads the dev policy, loads exact exceptions, uses the deterministic baseline scan identity, and executes exactly one baseline scan.
-
-Dedicated tests cover both paths.
+1. when a COMPLETE baseline already exists, `ALREADY_ESTABLISHED` returns before policy loading, exception loading, or Shopify scan execution;
+2. when no baseline exists, exactly one deterministic baseline scan runs.
 
 ## Findings evidence surface — repository verified
 
-The first proper Findings surface is implemented:
-
 - `/app/findings` reads persisted open findings without rescanning Shopify;
-- list query is shop-scoped, ordered deterministically, capped at 250, and explicitly reports truncation;
+- list query is shop-scoped, deterministic, capped at 250, and explicitly reports truncation;
 - `/app/finding/:findingId` uses `id + shopId` lookup to prevent cross-shop evidence access;
-- detail exposes current finding state, immutable resource identity, latest evaluation, scan/policy/rule identity, observed/expected/evidence JSON when present, and ordered `FindingEvent` history;
+- detail exposes current finding state, immutable resource identity, latest Evaluation, scan/policy/rule identity, observed/expected/evidence JSON when present, and ordered `FindingEvent` history;
 - related exception evidence is shown when present;
-- Overview labels its ten records **Recent open findings** and links to the full Findings list and evidence detail;
-- Shopify products remain read-only and no scope beyond `read_products` was added.
+- Overview shows ten **Recent open findings** and links to the full list/evidence detail;
+- no Shopify write scope or mutation was added.
 
-The original Findings code checkpoint `5b93c555fb981f6ab7d244f760bbecd01654a66e` passed Quality Gate `33866964811`.
+Findings code checkpoint `5b93c555fb981f6ab7d244f760bbecd01654a66e` passed Quality Gate `33866964811`.
 
 ## Embedded Findings navigation defect — root cause identified and fixed
 
-Live acceptance of the first Findings build exposed a navigation-only defect: Overview persisted and rendered correctly, but clicking **View all open findings** or **View evidence history** produced a blank embedded page.
+Live acceptance of the first Findings build exposed a navigation-only defect: Overview persisted and rendered correctly, but **View all open findings** and **View evidence history** opened blank embedded pages.
 
-The routes/loaders were not changed for this fix. Repository review found all internal Findings navigation used raw HTML `<a>` anchors. Shopify's current React Router template explicitly warns that embedded apps must preserve the session through embedded-aware navigation: use React Router/Polaris navigation and **do not use `<a>`**. The same current template demonstrates internal navigation with `<s-link href="/app/additional">`.
+Repository review found the internal Findings links used raw HTML `<a>` anchors. Shopify's current React Router template explicitly warns that embedded apps must use embedded-aware React Router/Polaris navigation and **do not use `<a>`**; its current App Home example demonstrates internal navigation with `<s-link href="/app/additional">`.
 
-CatalogGuard changed only the embedded navigation boundary:
+CatalogGuard changed only the navigation boundary:
 
-- Overview `/app/findings` link: raw `<a>` -> Shopify `<s-link>`;
-- Overview finding-detail links: raw `<a>` -> Shopify `<s-link>`;
-- Findings back-to-Overview link: raw `<a>` -> Shopify `<s-link>`;
-- Findings detail links: raw `<a>` -> Shopify `<s-link>`;
-- Finding-detail back link: raw `<a>` -> Shopify `<s-link>`;
-- scaffold contract rejects raw `<a>` elements across these internal Findings routes and asserts the required Shopify links.
+- all internal Findings/Overview raw anchors -> Shopify `<s-link>`;
+- route loaders, persistence queries, shop scoping, evidence model, scopes, and write behavior are unchanged;
+- scaffold contract now rejects raw `<a>` elements across these internal Findings routes and asserts the required Shopify links.
 
-No loader, Prisma query, shop-scope guard, finding/evaluation/event model, Shopify scope, or write behavior changed.
-
-Final clean embedded-navigation code head after removing temporary formatters:
+Final clean code head after removing temporary formatting workflows:
 
 `68a69539e0304bb20de9435f54393f5054a1e00c`
 
-Permanent Quality Gate `33868940433` — **success**. Locked install, formatting, lint, TypeScript, all scaffold/domain/persistence tests, Prisma validation, clean migration deployment, and production build passed.
+Permanent Quality Gate `33868940433` — **success**. Locked install, formatting, lint, TypeScript, all tests, Prisma validation, clean migration deployment, and production build passed.
 
 ## Phase 3 live acceptance still open
 
 One live UI pass remains before Issue #13 should be closed:
 
-1. pull/restart the synchronized head `09783e3426f00760d54912f892b504fc6b2742d2` or later;
-2. verify Overview still shows the persisted 2026-09-04 07:53:27 baseline and 17 products / 26 variants / 21 baseline-debt findings;
+1. pull/restart authoritative head `297bc9b8c09f04e7a28706b9d613918d6e478be0` or later;
+2. verify Overview still shows the persisted 07:53:27 baseline and 17 products / 26 variants / 21 baseline-debt findings;
 3. open **View all open findings** and verify the Findings page renders 21 of 21 current findings;
-4. open at least one **View evidence history** link and verify finding status, latest Evaluation, immutable identifiers, and FindingEvent history render;
+4. open at least one **View evidence history** link and verify finding status, latest Evaluation, immutable identifiers, and FindingEvent history;
 5. verify Shopify-link navigation back to Findings and Overview works.
 
 If those pass, close Issue #13 and proceed to merchant-facing immutable policy revisions and exact exception/waiver management.
 
-## Next bounded Phase 3 work after live Findings acceptance
+## Next bounded work after live Findings acceptance
 
 1. merchant-facing policy creation/editing through immutable new revisions;
 2. exact exception create/revoke UI while preserving technical FAIL separately from WAIVED enforcement;
 3. preflight persistence/UI;
 4. webhook/incremental detection paired with periodic full reconciliation;
-5. evaluate Shopify Bulk Operations before production-scale large-catalog use;
+5. Shopify Bulk Operations evaluation for production-scale catalogs;
 6. production hosting/PostgreSQL only after the current evidence workflow is accepted.
 
 ## Repository-green checkpoints
 
-These are evidence points, not user approvals:
-
 - Phase 1 scaffold: `86a7deeee8076cc71a3dccde762697d1db6a2543` / `33774438006`
 - Phase 2 completion handoff: `c65eb5dfc8b84f6dc190679ee56d50033d13b308` / `33793827908`
 - Phase 3 first slice: `da9597471b166569e44a8ca8d35fd9dbd61791b4` / `33795979049`
-- Phase 3 React Router exact action-origin configuration: `888d5fe053da1993113f0362044f22d03e4e6cbf` / `33802077280`
-- Phase 3 root-cause synchronized handoff: `9d532d58e2efc32123a0b7be4511a1435b19b6d6` / `33802280036`
+- Phase 3 action-origin configuration: `888d5fe053da1993113f0362044f22d03e4e6cbf` / `33802077280`
 - Phase 3 repeated guard + Findings evidence surface: `5b93c555fb981f6ab7d244f760bbecd01654a66e` / `33866964811`
 - Phase 3 embedded-safe Findings navigation: `68a69539e0304bb20de9435f54393f5054a1e00c` / `33868940433`
 
