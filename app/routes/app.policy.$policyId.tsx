@@ -156,9 +156,13 @@ export default function CatalogGuardPolicyWorkspace() {
     form.set(
       "edits",
       JSON.stringify(
-        rules.map(
-          ({ configJson: _config, scopeJson: _scope, ...rule }) => rule,
-        ),
+        rules.map((rule) => ({
+          ruleCode: rule.ruleCode,
+          ruleVersion: rule.ruleVersion,
+          enabled: rule.enabled,
+          severity: rule.severity,
+          blocking: rule.blocking,
+        })),
       ),
     );
     submit(form, { method: "post" });
