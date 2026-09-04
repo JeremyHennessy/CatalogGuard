@@ -201,3 +201,55 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 **Reason:** Admin UI extensions and preflight tools do not automatically imply control over every native Shopify save/publish path.
 
 **Status:** Active.
+
+## D-021 — Preflight evidence uses immutable run records and materialized targets
+
+**Date:** 2026-09-04
+
+**Decision:** Persisted preflight evidence records the exact shop, linked PREFLIGHT scan, immutable policy revision, target definition, deterministic input fingerprint, outcome counts, source freshness, actor metadata, and materialized evaluated product/variant target fingerprints.
+
+**Reason:** Product sets and collection membership can change after launch review. Historical preflight evidence must remain reproducible without being reinterpreted through the current catalog or a later policy revision.
+
+**Status:** Active. Merchant product and collection preflight execution is wired to evidence-only run actions; PREFLIGHT scans do not update current Finding lifecycle until that product semantic is explicitly accepted.
+
+
+## D-022 — Product preflight is evidence-only in V1
+
+**Date:** 2026-09-04
+
+**Decision:** Merchant-triggered product preflight creates immutable `PREFLIGHT` scan, evaluation, preflight-run, and materialized-target evidence, but does not create or update current `Finding` or `FindingEvent` lifecycle state.
+
+**Reason:** Launch review should answer whether the selected target passes the current policy now without changing the global regression/current-state dashboard. Full reconciliation remains the explicit merchant action that updates current findings.
+
+**Status:** Active for product preflight. Collection preflight follows the same evidence-only boundary under D-023. CSV preflight and future publish-blocking semantics remain separate decisions.
+
+## D-023 — Collection preflight materializes live membership evidence
+
+**Date:** 2026-09-04
+
+**Decision:** Merchant-triggered collection preflight reads live collection product membership through Shopify Admin GraphQL, evaluates those materialized products against the exact active policy revision using complete catalog context, and persists a `COLLECTION` preflight run with exact product/variant target fingerprints. The path remains evidence-only and does not mutate current findings.
+
+**Reason:** Collection membership can change after a launch review. Historical preflight evidence must preserve exactly which products and variants were evaluated without being reinterpreted through current collection membership, and the implementation should keep V1 read-only with no scopes beyond `read_products`.
+
+**Status:** Active. Live Shopify acceptance and large-catalog Bulk Operations optimization remain pending.
+
+## D-024 — Preflight export is persisted evidence only
+
+**Date:** 2026-09-04
+
+**Decision:** Preflight detail and JSON export must be derived from the persisted preflight run, linked scan, materialized targets, evaluation rows, immutable policy revision, policy-rule metadata, and referenced exception evidence. Export must not perform a live Shopify read or policy re-evaluation.
+
+**Reason:** A historical preflight is evidence of what was evaluated at that time. Re-reading Shopify or re-running the current rule engine could silently reinterpret old launch evidence through changed catalog membership, changed product data, or changed policy semantics.
+
+**Status:** Active. Live Shopify acceptance remains pending.
+
+
+## D-025 — Product webhooks record change intent, not current-state truth
+
+**Date:** 2026-09-04
+
+**Decision:** Product create/update/delete webhooks persist idempotent `CatalogChangeEvent` evidence keyed by Shopify `webhookId`, record canonical payload/fingerprint/resource identity when lossless, and mark matched-shop events `PENDING_INCREMENTAL_RECONCILIATION`. Webhook receipt does not update current findings or claim the catalog is reconciled.
+
+**Reason:** Webhooks can be duplicated, delayed, delivered out of order, or missed. CatalogGuard needs webhook evidence for prompt follow-up work, but complete reconciliation remains the correctness mechanism for trusted current-state findings.
+
+**Status:** Active. Live Shopify webhook delivery acceptance and the pending-event reconciliation processor remain pending.

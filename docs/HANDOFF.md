@@ -14,6 +14,13 @@ Phase 3: issue #13 CLOSED / PR #14 draft stacked on Phase 2
 Phase 4 branch: phase-4/policies-exceptions
 Phase 4 issue: #15 OPEN
 Phase 4 PR: #16 draft stacked on Phase 3
+Phase 5 branch: phase-5/preflight-evidence
+Phase 5 PR: #17 draft stacked on Phase 4
+Phase 5 preflight execution/detail/export code checkpoint: e6a5d57fca557c174243a2f2e4b1b8f214d4f8a8
+Phase 5 preflight execution/detail/export Quality Gate: 33889068968 — success
+Phase 5 product webhook evidence code checkpoint: 6b68ce486cdd00f0027bf6a4f3895ccdef929f0d
+Phase 5 product webhook evidence Quality Gate: 33892505369 — success
+Phase 5 live acceptance: pending
 Phase 4 combined green code head: d25be542ef26439026ca4288ffd2105434df2610
 Phase 4 combined Quality Gate: 33876152592 — success
 Shopify Admin API: 2026-07 / ApiVersion.July26
@@ -214,7 +221,80 @@ The run remains read-only to Shopify products and uses the current exact-waiver 
 
 Tests prove exact active-revision capture, stale-revision rejection before scan execution, and `POLICY_CHANGE` cause propagation.
 
-## Next live acceptance
+
+## Phase 5 — preflight execution/detail/export and webhook evidence repository green, live acceptance pending
+
+Branch: `phase-5/preflight-evidence`
+Draft PR: #17 stacked on Phase 4
+Preflight execution/detail/export code checkpoint: `e6a5d57fca557c174243a2f2e4b1b8f214d4f8a8`
+Preflight execution/detail/export Quality Gate: `33889068968` — **success**
+Product webhook evidence code checkpoint: `6b68ce486cdd00f0027bf6a4f3895ccdef929f0d`
+Product webhook evidence Quality Gate: `33892505369` — **success**
+
+This slice creates the preflight evidence foundation, wires merchant-triggered product and collection preflight actions, exposes persisted evidence detail/export, and records product webhook change evidence without changing Shopify write permissions or mutating Shopify products.
+
+### Deterministic outcome and evidence planning
+
+`summarizePreflightEvaluationsV1` and `buildPreflightEvidencePlanV1` provide a deterministic preflight contract:
+
+- blocking technical violations produce `FAIL`;
+- blocking indeterminate evidence produces `INDETERMINATE` when no blocking violation exists;
+- waived blocking failures produce `PASS_WITH_WAIVERS` when no blocking violation/indeterminate exists;
+- non-blocking violations do not block `PASS`;
+- all evaluations must match the exact immutable policy revision;
+- every evaluated product/variant must be present in the materialized target set;
+- target and evaluation order is canonicalized before fingerprinting.
+
+### Product and collection preflight run actions
+
+The `/app/preflight` route now includes authenticated product and collection preflight flows:
+
+- active policy choices are loaded for the shop;
+- product input accepts Shopify product GIDs, bare numeric product IDs, and Shopify Admin product URLs;
+- collection input accepts Shopify collection GIDs, bare numeric collection IDs, and Shopify Admin collection URLs;
+- `expectedRevisionId` guards against stale pages evaluating a different active revision;
+- the collection-membership query was validated against Shopify Admin GraphQL `2026-07` and requires only `read_products`;
+- collection product membership is read through paginated Admin GraphQL and rejects missing collections, mismatched collection IDs, duplicate product IDs, and stalled pagination;
+- the verified Shopify catalog reader still requires a complete catalog before evaluation;
+- selected products or live collection members are evaluated against the active immutable revision while the store-wide identifier index remains available for uniqueness rules;
+- current exact exceptions are applied during evaluation;
+- product and variant targets are materialized with deterministic fingerprints.
+
+### Evidence-only persistence boundary
+
+Product and collection preflight create a completed `Scan` with `scanType: PREFLIGHT`, persisted `Evaluation` rows, one immutable `PreflightRun`, and its `PreflightTarget` rows. Scan metadata records `evidenceOnly: true`, the preflight run id, target count, and the plan input fingerprint.
+
+These paths deliberately do **not** create or update `Finding`, `FindingEvent`, or current dashboard finding lifecycle state. Full reconciliation remains the explicit path for updating current findings.
+
+Reusing a preflight run or scan ID is allowed only when immutable identity, counts, fingerprinted target definition, materialized targets, and scan metadata match exactly; conflicting reuse errors instead of rewriting history.
+
+### Evidence detail and export
+
+Persisted preflight runs now link from the `/app/preflight` history list to `/app/preflight/:preflightRunId`.
+
+The detail route is shop-scoped and loads only persisted evidence: `PreflightRun`, linked `Scan`, immutable `PolicyRevision`, `PreflightTarget` rows, `Evaluation` rows, policy-rule display metadata, and any exception referenced by an evaluation. It does **not** read Shopify, re-evaluate policy, or mutate current findings.
+
+`/app/preflight/:preflightRunId/export` emits a deterministic JSON evidence export from the same persisted record. The export parses canonical target-definition, scan metadata, and evaluation JSON fields into a `schemaVersion: 1` payload and rejects malformed persisted evidence rather than papering over it.
+
+### Product webhook change evidence
+
+CatalogGuard now subscribes in `shopify.app.toml` to `products/create`, `products/update`, and `products/delete` at `/webhooks/products`. The React Router route authenticates webhooks through Shopify's helper and persists idempotent `CatalogChangeEvent` evidence keyed by Shopify `webhookId`.
+
+Each event records shop domain, optional matched shop id, normalized topic, API version, resource type, resource GID when the payload provides lossless identity, legacy resource id/precision, canonical payload JSON, payload fingerprint, received timestamp, and processing state.
+
+Create/update webhooks require `admin_graphql_api_id`. Delete webhooks only derive a product GID from a string or safe integer id; unsafe numeric ids are stored as evidence without inventing a precise GID. Duplicate delivery with the same immutable evidence returns `ALREADY_OBSERVED`; conflicting reuse of a webhook id errors rather than rewriting history.
+
+Receipt is intentionally evidence-only: it updates `lastWebhookObservedAt` for matched shops and marks events `PENDING_INCREMENTAL_RECONCILIATION`; it does not mutate current `Finding` or `FindingEvent` lifecycle state.
+
+### Tests
+
+Focused tests cover outcome ordering, deterministic evidence planning, invalid evidence rejection, product target parsing, collection target parsing, collection membership pagination, exact active-revision stale guards, missing-target rejection before persistence, empty-collection rejection, evidence-only product/collection run persistence, deterministic preflight evidence export parsing, product webhook evidence normalization/idempotency boundaries, and schema/config contracts for `CatalogChangeEvent` plus product webhook subscriptions.
+
+### Boundary still pending
+
+Live Shopify acceptance for Phase 5 is pending, including product/collection preflight, preflight detail/export, and actual product webhook delivery through the configured app URL. Incremental reconciliation processing for pending `CatalogChangeEvent` rows is not wired yet; full reconciliation remains the correctness mechanism. CSV preflight and production-scale Bulk Operations remain deferred. Product and collection preflight currently use the exhaustive verified catalog reader; this preserves correctness for store-wide uniqueness rules but is not yet optimized for large catalogs.
+
+## Next live acceptance — Phase 4 follow-on
 
 Preserve the existing `dev.sqlite` and Shopify development config. Do **not** create another baseline.
 
@@ -227,10 +307,10 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 7. Any newly failing DRAFT resources introduced solely by the widened policy scope should be `POLICY_CHANGE_FAILURE`, not `NEW_REGRESSION`. Do not predict the count before the live store is evaluated.
 8. Optionally create an exact waiver on one blocking technical FAIL after the reconciliation: Overview `Waived failures` should increase and `Blocking violations` should decrease while technical FAIL remains unchanged. Revoke it and those current-state counts/enforcement should restore without another scan or Evaluation mutation.
 
-## Next engineering work after this live acceptance
+## Next engineering work after Phase 4 follow-on live acceptance
 
-1. Preflight persistence and merchant UI.
-2. Webhook/incremental detection paired with periodic full reconciliation.
+1. Live-verify product preflight, collection preflight, preflight detail, JSON export, and product webhook delivery on the Shopify development store without creating another baseline.
+2. Build the pending-event incremental reconciliation processor for `CatalogChangeEvent`, paired with periodic full reconciliation.
 3. Evaluate Shopify Bulk Operations before production-scale large-catalog use.
 4. Production hosting/PostgreSQL planning only after the evidence workflow is accepted.
 5. Weight/inventory/cost rules remain deliberately deferred until field/scope requirements are verified.
@@ -245,11 +325,16 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 - Phase 4 overlay-aware enforcement/Overview: `4bcecd95ed082c96dc9cb0eb2587c76cf9e48471` / `33874708162`
 - Phase 4 deterministic config/scope editor: `c46a1333ca17be0b2b86ee0d8991d21aca9fee36` / `33875437504`
 - Phase 4 combined policy-control/reconciliation checkpoint: `d25be542ef26439026ca4288ffd2105434df2610` / `33876152592`
+- Phase 5 preflight evidence/history: `8a76c5a399841a2d923cc74136e96e3cd801cb5a` / `33879334207`
+- Phase 5 product preflight execution: `5fac33d1e0fb09dda5c44ddb46e5d7e58312a182` / `33883270549`
+- Phase 5 product+collection preflight execution: `17168ad5f8bef017a718bc1745ef993cde266eb2` / `33887042328`
+- Phase 5 preflight evidence detail/export: `e6a5d57fca557c174243a2f2e4b1b8f214d4f8a8` / `33889068968`
+- Phase 5 product webhook evidence: `6b68ce486cdd00f0027bf6a4f3895ccdef929f0d` / `33892505369`
 
 ## Other unresolved items
 
 - No production host or PostgreSQL deployment is verified.
-- No preflight merchant UI exists yet.
-- No webhook/incremental refresh runtime is wired yet.
+- Product preflight, collection preflight, preflight detail, JSON export, and product webhook delivery are repository-green but not live-verified yet.
+- Product webhook change evidence is wired, but pending-event incremental reconciliation processing is not wired yet.
 - Shopify Bulk Operations has not yet been evaluated for production-scale catalogs.
 - Locked install still reports 23 npm advisories (3 moderate, 20 high). Do not use `npm audit fix --force`; investigate dependency families separately.

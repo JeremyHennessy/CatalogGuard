@@ -5,6 +5,8 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const migrationPath =
   "prisma/migrations/20260903132500_add_domain_persistence/migration.sql";
+const webhookMigrationPath =
+  "prisma/migrations/20260904154500_add_catalog_change_events/migration.sql";
 
 test("domain persistence models cover policy, evidence, lifecycle, and preflight", async () => {
   const schema = await read("prisma/schema.prisma");
@@ -21,6 +23,7 @@ test("domain persistence models cover policy, evidence, lifecycle, and preflight
     "RuleException",
     "PreflightRun",
     "PreflightTarget",
+    "CatalogChangeEvent",
   ]) {
     assert.match(schema, new RegExp(`model ${model} \\{`));
   }
@@ -33,6 +36,12 @@ test("domain persistence models cover policy, evidence, lifecycle, and preflight
   );
   assert.match(schema, /coverageType\s+String\s+@default\("FINDING_EXACT"\)/);
   assert.match(schema, /latestEvaluationId\s+String/);
+  assert.match(schema, /lastWebhookObservedAt\s+DateTime\?/);
+  assert.match(
+    schema,
+    /processingState\s+String\s+@default\("PENDING_INCREMENTAL_RECONCILIATION"\)/,
+  );
+  assert.match(schema, /@@index\(\[shopId, processingState, receivedAt\]\)/);
 });
 
 test("migration contains the evidence-protecting uniqueness constraints", async () => {
@@ -64,4 +73,25 @@ test("quality gate deploys migrations against a clean development database", asy
     /rm -f prisma\/dev\.sqlite prisma\/dev\.sqlite-journal/,
   );
   assert.match(workflow, /npm run prisma:migrate:deploy/);
+});
+
+test("catalog change migration preserves webhook idempotency and pending reconciliation evidence", async () => {
+  const migration = await read(webhookMigrationPath);
+
+  assert.match(migration, /CREATE TABLE "CatalogChangeEvent"/);
+  assert.match(migration, /"id" TEXT NOT NULL PRIMARY KEY/);
+  assert.match(migration, /"payloadFingerprint" TEXT NOT NULL/);
+  assert.match(
+    migration,
+    /"processingState" TEXT NOT NULL DEFAULT 'PENDING_INCREMENTAL_RECONCILIATION'/,
+  );
+  assert.match(
+    migration,
+    /CatalogChangeEvent_shopId_processingState_receivedAt_idx.*shopId.*processingState.*receivedAt/s,
+  );
+  assert.match(
+    migration,
+    /CatalogChangeEvent_shopDomain_topic_receivedAt_idx.*shopDomain.*topic.*receivedAt/s,
+  );
+  assert.match(migration, /ON DELETE SET NULL/);
 });

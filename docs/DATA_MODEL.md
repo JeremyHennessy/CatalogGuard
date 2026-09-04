@@ -216,6 +216,8 @@ metadataJson?
 
 An incremental scan may represent one affected resource/change batch. If implementation uses a distinct EvaluationRun model instead, preserve equivalent evidence.
 
+Implementation note (2026-09-04): merchant-triggered product and collection preflight create a completed `PREFLIGHT` Scan with normal `Evaluation` rows and `metadataJson` containing `evidenceOnly: true`, the preflight run id, target count, and input fingerprint. They do not update `Finding` or `FindingEvent`; full reconciliation remains the path that mutates current finding lifecycle.
+
 ## 12. BulkOperation
 
 Track Shopify asynchronous bulk work explicitly.
@@ -380,6 +382,8 @@ lastError?
 
 Use the strongest stable delivery identifier Shopify provides in the current webhook format. Fallback payload hashing should not be assumed sufficient without collision/replay considerations.
 
+Implementation note (2026-09-04): the current Prisma schema implements product webhook receipt/change-intent evidence as `CatalogChangeEvent`, keyed by Shopify `webhookId`. It records normalized topic, API version, shop domain, optional matched shop id, canonical payload JSON, payload fingerprint, product identity when lossless, received timestamp, and processing state. Product create/update require `admin_graphql_api_id`; delete only derives a product GID from a string or safe integer id. This is evidence of change intent and delivery, not proof of current catalog state.
+
 ## 19. Preflight
 
 Could use Scan with `scanType=PREFLIGHT` plus specialized target tables.
@@ -403,6 +407,9 @@ createdByActor?
 createdAt
 completedAt?
 ```
+
+
+Implementation note (2026-09-04): the persisted slice stores `targetDefinitionJson` as canonical evidence containing `inputFingerprint` plus `targetDefinition`. Product preflight accepts product GIDs, numeric product IDs, or Shopify Admin product URLs. Collection preflight accepts collection GIDs, numeric collection IDs, or Shopify Admin collection URLs, reads live collection product membership through Shopify Admin GraphQL, records `targetType: COLLECTION` with collection GID/handle/title evidence, evaluates the materialized products against the exact active policy revision, and stores exact evaluated product/variant identities and fingerprints. Detail/export loads the shop-scoped persisted `PreflightRun`, linked `Scan`, immutable `PolicyRevision`, materialized targets, evaluations, policy-rule metadata, and any evaluation-linked exception; JSON export parses canonical persisted JSON into a `schemaVersion: 1` evidence payload. Reusing a preflight run or scan ID with different immutable evidence is rejected rather than treated as an update.
 
 ## 20. PreflightTarget
 
@@ -472,7 +479,9 @@ Likely important indexes:
 - Finding by shop + rule code
 - Evaluation by scan
 - Scan by shop + startedAt/status
-- WebhookReceipt by delivery/idempotency identifier
+- WebhookReceipt/CatalogChangeEvent by delivery/idempotency identifier
+- CatalogChangeEvent by shop + processing state + received time
+- CatalogChangeEvent by shop domain + topic + received time
 - PolicyRevision by policy + revision number
 - Exception by finding + active date conditions
 
