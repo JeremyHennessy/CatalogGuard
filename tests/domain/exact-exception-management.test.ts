@@ -118,30 +118,48 @@ test("exact waiver creation rejects non-fail findings and invalid expiry", async
   );
 });
 
-test("revocation records a timestamp/reason and never deletes the exception", async () => {
+test("revocation is scoped to shop plus finding and never deletes the exception", async () => {
   const writes: unknown[] = [];
+  const dependencies = {
+    loadException: async () => ({
+      id: "exception_a",
+      shopId: "shop_a",
+      coverageType: "FINDING_EXACT" as const,
+      ruleCode: finding.ruleCode,
+      resourceGid: finding.resourceGid,
+      subresourceGid: finding.subresourceGid,
+      reason: "Approved legacy exception",
+      createdAt: "2026-09-04T12:00:00.000Z",
+      findingId: "finding_a",
+    }),
+    persistRevoke: async (input: unknown) => writes.push(input),
+  };
+
+  await assert.rejects(
+    () =>
+      revokeExactFindingWaiverV1(
+        {
+          shopId: "shop_a",
+          findingId: "finding_b",
+          exceptionId: "exception_a",
+          revokedAt: "2026-09-06T12:00:00.000Z",
+          revocationReason: "Wrong finding",
+        },
+        dependencies,
+      ),
+    /does not belong to the requested finding/,
+  );
+
   const result = await revokeExactFindingWaiverV1(
     {
       shopId: "shop_a",
+      findingId: "finding_a",
       exceptionId: "exception_a",
       revokedAt: "2026-09-06T12:00:00.000Z",
       revokedByActor: "merchant-user",
       revocationReason: " Issue must now be fixed ",
     },
-    {
-      loadException: async () => ({
-        id: "exception_a",
-        shopId: "shop_a",
-        coverageType: "FINDING_EXACT",
-        ruleCode: finding.ruleCode,
-        resourceGid: finding.resourceGid,
-        subresourceGid: finding.subresourceGid,
-        reason: "Approved legacy exception",
-        createdAt: "2026-09-04T12:00:00.000Z",
-        findingId: "finding_a",
-      }),
-      persistRevoke: async (input) => writes.push(input),
-    },
+    dependencies,
   );
 
   assert.equal(result.revokedAt, "2026-09-06T12:00:00.000Z");
