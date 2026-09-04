@@ -64,7 +64,7 @@ test("catalog product webhook evidence records unmatched shops without queueing 
 });
 
 test("catalog product delete webhook does not derive a GID from an unsafe numeric id", () => {
-  const unsafeProductId = 788032119674292922;
+  const unsafeProductId = Number("788032119674292922");
   assert.equal(Number.isSafeInteger(unsafeProductId), false);
 
   const evidence = buildCatalogChangeWebhookEvidenceV1({
