@@ -232,3 +232,13 @@ Record material product/architecture/commercial decisions here. Do not rewrite h
 **Reason:** Collection membership can change after a launch review. Historical preflight evidence must preserve exactly which products and variants were evaluated without being reinterpreted through current collection membership, and the implementation should keep V1 read-only with no scopes beyond `read_products`.
 
 **Status:** Active. Live Shopify acceptance and large-catalog Bulk Operations optimization remain pending.
+
+## D-024 — Preflight export is persisted evidence only
+
+**Date:** 2026-09-04
+
+**Decision:** Preflight detail and JSON export must be derived from the persisted preflight run, linked scan, materialized targets, evaluation rows, immutable policy revision, policy-rule metadata, and referenced exception evidence. Export must not perform a live Shopify read or policy re-evaluation.
+
+**Reason:** A historical preflight is evidence of what was evaluated at that time. Re-reading Shopify or re-running the current rule engine could silently reinterpret old launch evidence through changed catalog membership, changed product data, or changed policy semantics.
+
+**Status:** Active. Live Shopify acceptance remains pending.

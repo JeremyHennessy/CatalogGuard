@@ -16,8 +16,8 @@ Phase 4 issue: #15 OPEN
 Phase 4 PR: #16 draft stacked on Phase 3
 Phase 5 branch: phase-5/preflight-evidence
 Phase 5 PR: #17 draft stacked on Phase 4
-Phase 5 product+collection preflight code checkpoint: 17168ad5f8bef017a718bc1745ef993cde266eb2
-Phase 5 Quality Gate: 33887042328 — success
+Phase 5 preflight execution/detail/export code checkpoint: e6a5d57fca557c174243a2f2e4b1b8f214d4f8a8
+Phase 5 Quality Gate: 33889068968 — success
 Phase 5 live acceptance: pending
 Phase 4 combined green code head: d25be542ef26439026ca4288ffd2105434df2610
 Phase 4 combined Quality Gate: 33876152592 — success
@@ -220,14 +220,14 @@ The run remains read-only to Shopify products and uses the current exact-waiver 
 Tests prove exact active-revision capture, stale-revision rejection before scan execution, and `POLICY_CHANGE` cause propagation.
 
 
-## Phase 5 — product and collection preflight execution repository green, live acceptance pending
+## Phase 5 — preflight execution/detail/export repository green, live acceptance pending
 
 Branch: `phase-5/preflight-evidence`
 Draft PR: #17 stacked on Phase 4
-Product+collection code checkpoint: `17168ad5f8bef017a718bc1745ef993cde266eb2`
-Quality Gate: `33887042328` — **success**
+Preflight execution/detail/export code checkpoint: `e6a5d57fca557c174243a2f2e4b1b8f214d4f8a8`
+Quality Gate: `33889068968` — **success**
 
-This slice creates the preflight evidence foundation and wires merchant-triggered product and collection preflight actions without changing Shopify write permissions or mutating Shopify products.
+This slice creates the preflight evidence foundation, wires merchant-triggered product and collection preflight actions, and exposes persisted evidence detail/export without changing Shopify write permissions or mutating Shopify products.
 
 ### Deterministic outcome and evidence planning
 
@@ -264,13 +264,21 @@ These paths deliberately do **not** create or update `Finding`, `FindingEvent`, 
 
 Reusing a preflight run or scan ID is allowed only when immutable identity, counts, fingerprinted target definition, materialized targets, and scan metadata match exactly; conflicting reuse errors instead of rewriting history.
 
+### Evidence detail and export
+
+Persisted preflight runs now link from the `/app/preflight` history list to `/app/preflight/:preflightRunId`.
+
+The detail route is shop-scoped and loads only persisted evidence: `PreflightRun`, linked `Scan`, immutable `PolicyRevision`, `PreflightTarget` rows, `Evaluation` rows, policy-rule display metadata, and any exception referenced by an evaluation. It does **not** read Shopify, re-evaluate policy, or mutate current findings.
+
+`/app/preflight/:preflightRunId/export` emits a deterministic JSON evidence export from the same persisted record. The export parses canonical target-definition, scan metadata, and evaluation JSON fields into a `schemaVersion: 1` payload and rejects malformed persisted evidence rather than papering over it.
+
 ### Tests
 
-Focused tests cover outcome ordering, deterministic evidence planning, invalid evidence rejection, product target parsing, collection target parsing, collection membership pagination, exact active-revision stale guards, missing-target rejection before persistence, empty-collection rejection, and evidence-only product/collection run persistence.
+Focused tests cover outcome ordering, deterministic evidence planning, invalid evidence rejection, product target parsing, collection target parsing, collection membership pagination, exact active-revision stale guards, missing-target rejection before persistence, empty-collection rejection, evidence-only product/collection run persistence, and deterministic preflight evidence export parsing.
 
 ### Boundary still pending
 
-Live Shopify acceptance for Phase 5 is pending. CSV preflight, history drill-down/export, and production-scale Bulk Operations remain deferred. Product and collection preflight currently use the exhaustive verified catalog reader; this preserves correctness for store-wide uniqueness rules but is not yet optimized for large catalogs.
+Live Shopify acceptance for Phase 5 is pending. CSV preflight and production-scale Bulk Operations remain deferred. Product and collection preflight currently use the exhaustive verified catalog reader; this preserves correctness for store-wide uniqueness rules but is not yet optimized for large catalogs.
 
 ## Next live acceptance — Phase 4 follow-on
 
@@ -287,12 +295,11 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 
 ## Next engineering work after Phase 4 follow-on live acceptance
 
-1. Live-verify product and collection preflight actions on the Shopify development store without creating another baseline.
-2. Add preflight history detail/export for persisted run evidence.
-3. Webhook/incremental detection paired with periodic full reconciliation.
-4. Evaluate Shopify Bulk Operations before production-scale large-catalog use.
-5. Production hosting/PostgreSQL planning only after the evidence workflow is accepted.
-6. Weight/inventory/cost rules remain deliberately deferred until field/scope requirements are verified.
+1. Live-verify product preflight, collection preflight, preflight detail, and JSON export on the Shopify development store without creating another baseline.
+2. Webhook/incremental detection paired with periodic full reconciliation.
+3. Evaluate Shopify Bulk Operations before production-scale large-catalog use.
+4. Production hosting/PostgreSQL planning only after the evidence workflow is accepted.
+5. Weight/inventory/cost rules remain deliberately deferred until field/scope requirements are verified.
 
 ## Repository-green checkpoints
 
@@ -307,11 +314,12 @@ Preserve the existing `dev.sqlite` and Shopify development config. Do **not** cr
 - Phase 5 preflight evidence/history: `8a76c5a399841a2d923cc74136e96e3cd801cb5a` / `33879334207`
 - Phase 5 product preflight execution: `5fac33d1e0fb09dda5c44ddb46e5d7e58312a182` / `33883270549`
 - Phase 5 product+collection preflight execution: `17168ad5f8bef017a718bc1745ef993cde266eb2` / `33887042328`
+- Phase 5 preflight evidence detail/export: `e6a5d57fca557c174243a2f2e4b1b8f214d4f8a8` / `33889068968`
 
 ## Other unresolved items
 
 - No production host or PostgreSQL deployment is verified.
-- Product and collection preflight run actions are repository-green but not live-verified yet.
+- Product preflight, collection preflight, preflight detail, and JSON export are repository-green but not live-verified yet.
 - No webhook/incremental refresh runtime is wired yet.
 - Shopify Bulk Operations has not yet been evaluated for production-scale catalogs.
 - Locked install still reports 23 npm advisories (3 moderate, 20 high). Do not use `npm audit fix --force`; investigate dependency families separately.
