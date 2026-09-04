@@ -1,6 +1,7 @@
 import * as assert from "node:assert/strict";
 import { test } from "node:test";
 import { runProductPreflightV1 } from "../../app/application/run-product-preflight";
+import type { PreflightEvidencePlanV1 } from "../../app/application/preflight-evidence";
 import { normalizeShopifyCatalogV1 } from "../../app/domain/catalog/shopify-normalizer";
 import {
   POLICY_SCHEMA_VERSION,
@@ -9,6 +10,7 @@ import {
 import { createBuiltinRuleRegistry } from "../../app/domain/rules/registry";
 import type {
   PersistPreflightEvidenceInputV1,
+  PersistPreflightResultV1,
   PreflightRepository,
 } from "../../app/persistence/preflight-repository";
 
@@ -92,7 +94,9 @@ function revision() {
 class RecordingPreflightRepository implements PreflightRepository {
   input?: PersistPreflightEvidenceInputV1;
 
-  async persistPreflight() {
+  async persistPreflight(
+    _plan: PreflightEvidencePlanV1,
+  ): Promise<PersistPreflightResultV1> {
     throw new Error("plain preflight persistence is not used by product runs");
   }
 

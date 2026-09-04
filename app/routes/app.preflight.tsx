@@ -127,6 +127,10 @@ export default function CatalogGuardPreflight() {
       policyChoices[0],
     [policyChoices, selectedPolicyId],
   );
+  const actionError =
+    actionData && "error" in actionData ? actionData.error : undefined;
+  const actionResult =
+    actionData && "result" in actionData ? actionData.result : undefined;
   const isSubmitting = navigation.state !== "idle";
 
   const runPreflight = () => {
@@ -219,15 +223,14 @@ export default function CatalogGuardPreflight() {
           </div>
         )}
 
-        {actionData && "error" in actionData ? (
-          <s-paragraph>Preflight did not run: {actionData.error}</s-paragraph>
+        {actionError ? (
+          <s-paragraph>Preflight did not run: {actionError}</s-paragraph>
         ) : null}
-        {actionData && "result" in actionData ? (
+        {actionResult ? (
           <s-paragraph>
-            Saved {actionData.result.targetType} preflight{" "}
-            {actionData.result.outcome} with {actionData.result.evaluationCount}{" "}
-            evaluations across {actionData.result.targetCount} materialized
-            targets.
+            Saved {actionResult.targetType} preflight {actionResult.outcome}{" "}
+            with {actionResult.evaluationCount} evaluations across{" "}
+            {actionResult.targetCount} materialized targets.
           </s-paragraph>
         ) : null}
       </s-section>
