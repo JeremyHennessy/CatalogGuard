@@ -1,3 +1,4 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
 import { createHash } from "node:crypto";
 import type { PolicyEvaluationV1 } from "../domain/policy/evaluator";
 import {
@@ -189,7 +190,9 @@ export function buildPreflightEvidencePlanV1(input: {
 
     const key = evaluatedTargetKey(evaluation);
     if (!targetKeys.has(key)) {
-      throw new Error(`preflight evaluation target was not materialized: ${key}`);
+      throw new Error(
+        `preflight evaluation target was not materialized: ${key}`,
+      );
     }
   }
 
